@@ -37,6 +37,7 @@ Local development defaults to Docker Compose. Host PHP, Composer, and PostgreSQL
 cp .env.example .env
 bin/composer install
 bin/artisan key:generate
+bin/artisan migrate
 bin/test
 ```
 
