@@ -1,0 +1,61 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Laravel scaffold with Blade-first rendering, Vite assets, PostgreSQL defaults, and Pest/PHPUnit test wiring.
+  Architecture: Modular monolith planned under app/Modules/* with host-separated admin/public HTTP surfaces.
+  Testing: Pest + PHPUnit run through the Dockerized bin/test wrapper, with feature smoke tests for the host-separated public/admin surfaces.
+  Style: Default Laravel conventions with English code/comments and Spanish application-facing copy.
+
+strict_tdd: true
+
+testing:
+  detected_on: 2026-06-16
+  strict_tdd: true
+  runner:
+    available: true
+    framework: "Pest + PHPUnit"
+    command: "bin/test"
+  layers:
+    unit:
+      available: true
+      tool: "Pest"
+    integration:
+      available: true
+      tool: "Laravel HTTP tests via Pest"
+    e2e:
+      available: false
+      tool: "—"
+  coverage:
+    available: false
+    command: ""
+  quality:
+    linter:
+      available: false
+      command: ""
+    type_checker:
+      available: false
+      command: ""
+    formatter:
+      available: false
+      command: ""
+
+rules:
+  proposal:
+    - Keep scope explicit because the project has no established codebase yet.
+  specs:
+    - Use Given/When/Then for scenarios.
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY).
+  design:
+    - Document foundational architecture decisions before implementation.
+  tasks:
+    - Keep tasks small and sequenced for greenfield setup.
+  apply:
+    - Follow RED-GREEN-REFACTOR through the repository wrappers.
+    tdd: true
+    test_command: "bin/test"
+  verify:
+    test_command: "bin/test"
+    build_command: ""
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas.
