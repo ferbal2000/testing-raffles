@@ -106,7 +106,7 @@
 ## Remaining Tasks
 
 - [ ] 2.1 Write RED feature tests in `tests/Feature/Auth/AdminGuardIsolationTest.php` and `tests/Feature/Auth/PublicGuardIsolationTest.php` using `bin/test`.
-- [ ] 2.2 Add migrations for `admin_users` and `public_users`; create `app/Modules/IdentityAdmin/AdminUser.php` and `app/Modules/IdentityPublic/PublicUser.php`.
+- [ ] 2.2 Historical wording corrected: add migration for `admins` and create `app/Modules/IdentityAdmin/Admin.php`; keep Laravel `users` / `App\Models\User` as the public identity boundary instead of creating a separate public identity table/model.
 - [ ] 2.3 Configure `config/auth.php`, `config/session.php`, and route/domain middleware so admin and public cookies/guards stay isolated; make Phase 2 tests pass.
 
 ## Workload / PR Boundary

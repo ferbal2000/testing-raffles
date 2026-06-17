@@ -74,7 +74,7 @@ The archive preserves unfinished follow-up guidance for later slices:
 Recommended next change starts from the archived Phase 2 tasks:
 
 1. Write RED tests for admin/public guard isolation.
-2. Introduce separate `admin_users` and `public_users` persistence/models.
+2. Superseding wording for the preserved Phase 2 plan: introduce `admins` / `Admin` for admin identity, while keeping Laravel `users` / `User` as the public identity boundary.
 3. Configure guard, session, and middleware isolation.
 4. Add at least one PostgreSQL-touching assertion once database-backed behavior lands.
 

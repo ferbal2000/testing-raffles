@@ -10,7 +10,7 @@ Implement the foundation slice as a Laravel modular monolith with Blade-first re
 |---|---|---|---|
 | Framework | Laravel 12-style app + Blade + Vite Vue islands | Full Vue SPA, Next.js monorepo | Laravel gives auth, validation, sessions, queues, migrations, and testing with less startup cost for a greenfield MVP. |
 | Module shape | Modular monolith under `app/Modules/*` with thin HTTP layer | Default Laravel-by-layer only | Keeps bounded contexts visible now and easier to extract later without overbuilding services today. |
-| Identity boundary | Separate `admin_users` and `public_users`, separate guards, providers, password brokers, and session cookies | Shared users table with roles | The requirement is hard isolation between public and admin experiences; separate models enforce it structurally. |
+| Identity boundary | Historical draft assumed separate admin and public identity tables; superseded wording keeps Laravel `users` / `User` for the public website and introduces `admins` / `Admin` for admin, with separate guards, providers, password brokers, and session cookies | Shared users table with roles | Hard isolation is still required, but the corrected plan preserves the already-established public identity boundary instead of creating a second public identity model. |
 | Rendering | Blade for full pages; Vue mounted per feature | SPA-first admin/public apps | Blade is faster for CRUD and auth flows; Vue remains available for richer admin widgets later. |
 | Dev runtime | `compose.yaml` + repo `bin/*` wrappers as the default local runtime | Host-installed PHP/Composer/Node, full CI/prod containerization now | Containers remove PHP version drift immediately, wrappers keep commands short for TDD, and limiting scope to local runtime avoids premature ops work. |
 | Draw integrity | One DB transaction with `lockForUpdate()`, unique `draws.raffle_id`, and audit append in the same commit | App-level mutex only | PostgreSQL constraints plus transaction boundaries are the reliable exactly-once control. |
@@ -52,7 +52,7 @@ Rejected draw attempts still append an audit event, but outside the winning inse
 | `app/Modules/Draws/*` | Create | Exactly-once draw orchestration and winner persistence. |
 | `app/Modules/Audit/*` | Create | Append-only audit writer and query objects. |
 | `app/Modules/IdentityAdmin/*` | Create | Admin user model, auth services, and policies. |
-| `app/Modules/IdentityPublic/*` | Create | Public user model and session auth services. |
+| `app/Modules/IdentityPublic/*` | Create | Historical planning label only; superseded by keeping `App\Models\User` as the public identity model and adding only public-side auth/session services where needed. |
 | `app/Http/Controllers/Admin/*` | Create | Admin Blade controllers for raffle lifecycle and draw actions. |
 | `app/Http/Controllers/Public/*` | Create | Public Blade controllers for auth and entry submission. |
 | `compose.yaml` | Create | Local-only app/db/node runtime for PHP 8.3+, Composer, PostgreSQL, and Vite tasks. |
@@ -60,7 +60,7 @@ Rejected draw attempts still append an audit event, but outside the winning inse
 | `bin/test`, `bin/artisan`, `bin/composer`, `bin/dev`, `bin/npm` | Create | Stable wrappers so tests and framework commands do not depend on host PHP/Composer/Node. |
 | `routes/admin.php`, `routes/web.php` | Create/Modify | Host-separated route registration. |
 | `config/auth.php`, `config/session.php` | Modify | Separate guards/providers/cookie names per surface. |
-| `database/migrations/*` | Create | `admin_users`, `public_users`, `raffles`, `raffle_entries`, `draws`, `audit_events`. |
+| `database/migrations/*` | Create | Corrected plan: `admins`, `raffles`, `raffle_entries`, `draws`, `audit_events`; keep existing Laravel `users` as the public identity table. |
 | `resources/views/{admin,public}/*` | Create | Blade-first UI with translation keys. |
 | `resources/js/*` | Create | Progressive Vue mounts only where needed. |
 | `README.md`, `openspec/config.yaml` | Modify | Document wrapper-first setup and point TDD commands to containerized runners. |
