@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Admin;
 use App\Models\User;
 
 return [
@@ -9,10 +10,9 @@ return [
     | Identity Boundary Notes
     |--------------------------------------------------------------------------
     |
-    | In this PR 1 foundation slice, Laravel's default User model and users
-    | provider remain the public website identity only. Admin authentication
-    | is intentionally out of scope here and will be introduced later with a
-    | separate model, table, guard, provider, broker, and session boundary.
+    | Laravel's default User model and users provider remain the public
+    | website identity. Admin authentication uses a separate Admin model,
+    | admins table, guard, provider, and password broker.
     |
     */
 
@@ -22,11 +22,14 @@ return [
             'table' => 'users',
             'guard' => 'web',
             'provider' => 'users',
+            'passwords' => 'users',
         ],
         'admin' => [
-            'status' => 'planned',
-            'future_boundary' => 'separate-model-table-guard',
-            'implemented_in_this_slice' => false,
+            'model' => Admin::class,
+            'table' => 'admins',
+            'guard' => 'admin',
+            'provider' => 'admins',
+            'passwords' => 'admins',
         ],
     ],
 
@@ -66,8 +69,11 @@ return [
     'guards' => [
         'web' => [
             'driver' => 'session',
-            // Public website session guard for the current slice.
             'provider' => 'users',
+        ],
+        'admin' => [
+            'driver' => 'session',
+            'provider' => 'admins',
         ],
     ],
 
@@ -91,8 +97,11 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            // Public website users only. Admin identity will be added separately.
-            'model' => env('AUTH_MODEL', User::class),
+            'model' => User::class,
+        ],
+        'admins' => [
+            'driver' => 'eloquent',
+            'model' => Admin::class,
         ],
 
         // 'users' => [
@@ -122,9 +131,14 @@ return [
 
     'passwords' => [
         'users' => [
-            // Password broker for public website users only.
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+        'admins' => [
+            'provider' => 'admins',
+            'table' => 'admin_password_reset_tokens',
             'expire' => 60,
             'throttle' => 60,
         ],

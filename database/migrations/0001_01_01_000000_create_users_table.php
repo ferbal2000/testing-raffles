@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Public website identities only for the foundation slice.
-        // Admin identities will move to a separate table in a later slice.
+        // Public website identities only.
+        // Admin identities are stored separately in the admins table.
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');

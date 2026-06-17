@@ -9,11 +9,11 @@ Define the verified foundation behavior that makes the raffles application runna
 - Local development and verification MUST run through repository wrapper commands instead of requiring host-installed PHP, Composer, or Node.
 - Public and admin HTTP entry points MUST remain host-separated.
 - Application-facing Spanish copy MUST be rendered through translation keys/files, not inline literals in Blade views.
-- The default Laravel `User` / `users` wiring MUST be treated as the public-site identity only until a separate admin identity is implemented.
+- The default Laravel `User` / `users` wiring MUST remain the public-site identity, and admin authentication MUST use separate `App\Models\Admin` / `admins` contracts.
 
 ## Out of Scope
 
-Admin identity implementation, PostgreSQL-backed domain persistence assertions, raffle lifecycle domain rules, entry submission, draw execution, and audit log behavior.
+PostgreSQL-backed domain persistence assertions, raffle lifecycle domain rules, entry submission, draw execution, and audit log behavior.
 
 ## Requirements
 
@@ -67,10 +67,32 @@ The public and admin placeholder surfaces MUST read their Spanish-facing copy fr
 
 ### Requirement: Temporary public identity boundary is explicit
 
-The foundation slice MUST document that the default Laravel `User` model and `users` table belong to the public website boundary only.
+The foundation slice MUST document that the default Laravel `User` model and `users` table belong to the public website boundary only, and any admin authentication MUST use `App\Models\Admin` backed by `admins`.
 
 #### Scenario: Future admin identity work starts from an explicit boundary
 
 - GIVEN a developer reads the auth configuration, model documentation, migration comments, or README
-- WHEN they inspect the current identity setup
-- THEN they can see that admin identity is intentionally deferred and the default Laravel user wiring is public-only in this slice
+- WHEN they inspect the identity setup
+- THEN they can see that `User` / `users` is public-only and admin identity is separate
+
+#### Scenario: Public identity source remains stable
+
+- GIVEN a public website authentication flow is reviewed
+- WHEN the implemented identity contract is inspected
+- THEN the public boundary still resolves through Laravel `User` / `users`
+
+### Requirement: Host separation is not auth isolation
+
+The foundation MUST require explicit auth-boundary verification; separate hosts MAY support routing, but they MUST NOT be treated as sufficient proof of admin/public authentication isolation.
+
+#### Scenario: Host routing alone is insufficient
+
+- GIVEN public and admin hosts resolve correctly
+- WHEN auth isolation is evaluated
+- THEN guard and session assertions are still required
+
+#### Scenario: Foundation verification uses the canonical runner
+
+- GIVEN auth-boundary tests exist
+- WHEN the foundation test workflow is executed
+- THEN verification runs through `./bin/test`

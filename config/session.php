@@ -2,6 +2,11 @@
 
 use Illuminate\Support\Str;
 
+$sessionCookieBase = Str::slug((string) env('APP_NAME', 'laravel'));
+
+$publicSessionCookie = env('SESSION_PUBLIC_COOKIE', $sessionCookieBase.'-public-session');
+$adminSessionCookie = env('SESSION_ADMIN_COOKIE', $sessionCookieBase.'-admin-session');
+
 return [
 
     /*
@@ -127,10 +132,14 @@ return [
     |
     */
 
-    'cookie' => env(
-        'SESSION_COOKIE',
-        Str::slug((string) env('APP_NAME', 'laravel')).'-session'
-    ),
+    'cookie' => env('SESSION_COOKIE', $publicSessionCookie),
+
+    'identity_boundary' => [
+        'cookies' => [
+            'public' => $publicSessionCookie,
+            'admin' => $adminSessionCookie,
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------
