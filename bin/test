@@ -2,10 +2,53 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TEST_DB_CONNECTION="pgsql"
+TEST_DB_HOST="${DB_TEST_HOST:-db}"
+TEST_DB_PORT="${DB_TEST_PORT:-5432}"
+TEST_DB_DATABASE="${DB_TEST_DATABASE:-raffles_testing}"
+TEST_DB_USERNAME="${DB_TEST_USERNAME:-${DB_USERNAME:-postgres}}"
+TEST_DB_PASSWORD="${DB_TEST_PASSWORD:-${DB_PASSWORD:-postgres}}"
+DEV_DB_DATABASE="${DB_DATABASE:-raffles}"
+
+if [[ -z "$TEST_DB_DATABASE" ]]; then
+  >&2 printf 'Refusing to run tests without a dedicated test database name.\n'
+  exit 1
+fi
+
+if [[ "$TEST_DB_DATABASE" == "$DEV_DB_DATABASE" ]]; then
+  >&2 printf 'Refusing to run tests against the development database: TEST_DB_DATABASE == DEV_DB_DATABASE (%s).\n' "$TEST_DB_DATABASE"
+  exit 1
+fi
+
+case "$TEST_DB_DATABASE" in
+  postgres|template0|template1)
+    >&2 printf 'Refusing to run tests against a dangerous database name: %s.\n' "$TEST_DB_DATABASE"
+    exit 1
+    ;;
+esac
 
 cd "$ROOT_DIR"
 
-exec docker compose run --rm -T app sh -lc '
+run_in_test_container() {
+  docker compose run --rm -T \
+    -e APP_ENV=testing \
+    -e DB_CONNECTION="$TEST_DB_CONNECTION" \
+    -e DB_HOST="$TEST_DB_HOST" \
+    -e DB_PORT="$TEST_DB_PORT" \
+    -e DB_DATABASE="$TEST_DB_DATABASE" \
+    -e DB_USERNAME="$TEST_DB_USERNAME" \
+    -e DB_PASSWORD="$TEST_DB_PASSWORD" \
+    -e CACHE_STORE=array \
+    -e SESSION_DRIVER=array \
+    -e QUEUE_CONNECTION=sync \
+    -e MAIL_MAILER=array \
+    -e BROADCAST_CONNECTION=null \
+    app "$@"
+}
+
+run_in_test_container php -r '$host = getenv("DB_HOST") ?: "db"; $port = getenv("DB_PORT") ?: "5432"; $database = getenv("DB_DATABASE") ?: "raffles_testing"; $username = getenv("DB_USERNAME") ?: "postgres"; $password = getenv("DB_PASSWORD") ?: "postgres"; $pdo = new PDO("pgsql:host={$host};port={$port};dbname=postgres", $username, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]); $statement = $pdo->prepare("SELECT 1 FROM pg_database WHERE datname = ?"); $statement->execute([$database]); if ($statement->fetchColumn() === false) { try { $pdo->exec(sprintf("CREATE DATABASE \"%s\"", str_replace("\"", "\"\"", $database))); } catch (PDOException $exception) { if ($exception->getCode() !== "23505") { throw $exception; } } }'
+
+run_in_test_container sh -lc '
   if [ ! -f .env ]; then cp .env.example .env; fi
   if [ ! -f vendor/autoload.php ]; then composer install; fi
   php artisan config:clear --ansi
