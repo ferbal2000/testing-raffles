@@ -17,10 +17,6 @@ class ApplyIdentityBoundary
 
         $request->attributes->set('identity_boundary', $boundary);
 
-        config([
-            'session.cookie' => $this->resolveSessionCookie($boundary),
-        ]);
-
         return $next($request);
     }
 
@@ -34,11 +30,6 @@ class ApplyIdentityBoundary
         }
 
         return 'public';
-    }
-
-    private function resolveSessionCookie(string $boundary): string
-    {
-        return (string) config("session.identity_boundary.cookies.{$boundary}", config('session.cookie'));
     }
 
     private function hostFromConfig(string $configKey): ?string

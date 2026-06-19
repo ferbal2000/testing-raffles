@@ -1,6 +1,10 @@
 <?php
 
+use App\Models\Admin;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Lang;
+
+uses(RefreshDatabase::class);
 
 function translationHostFor(string $configKey): string
 {
@@ -30,13 +34,16 @@ it('renders the public home copy from translation keys', function () {
         ->assertDontSeeText('Participá en sorteos transparentes');
 });
 
-it('renders the admin home copy from translation keys', function () {
+it('renders the admin home copy from translation keys for authenticated admins', function () {
+    $admin = Admin::factory()->create();
+
     Lang::addLines([
         'home.admin.title' => 'Título admin de prueba',
         'home.admin.description' => 'Descripción admin de prueba',
     ], 'es');
 
-    $this->withServerVariables(['HTTP_HOST' => translationHostFor('app.admin_url')])
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => translationHostFor('app.admin_url')])
         ->get(translationUrlFor('app.admin_url'))
         ->assertOk()
         ->assertSeeText('Título admin de prueba')

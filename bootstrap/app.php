@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\ApplyIdentityBoundary;
+use App\Http\Middleware\ApplyIdentityBoundarySessionCookie;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,8 +18,24 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(prepend: [
+        $middleware->redirectGuestsTo(function (Request $request): ?string {
+            if ($request->expectsJson()) {
+                return null;
+            }
+
+            $boundary = $request->attributes->get('identity_boundary');
+            $adminHost = parse_url((string) config('app.admin_url'), PHP_URL_HOST);
+
+            if ($boundary === 'admin' && is_string($adminHost) && $adminHost !== '' && $request->getHost() === $adminHost) {
+                return route('admin.login');
+            }
+
+            return null;
+        });
+
+        $middleware->prepend([
             ApplyIdentityBoundary::class,
+            ApplyIdentityBoundarySessionCookie::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

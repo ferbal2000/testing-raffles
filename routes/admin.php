@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\Auth\AuthenticatedSessionController;
 use App\Models\Admin;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,7 +25,15 @@ $adminBoundaryProbePayload = function (Request $request): array {
 
 if (is_string($adminHost) && $adminHost !== '') {
     Route::domain($adminHost)->group(function () use ($adminBoundaryProbePayload): void {
-        Route::view('/', 'admin.home')->name('admin.home');
+        Route::middleware('guest:admin')->group(function (): void {
+            Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('admin.login');
+            Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('admin.login.store');
+        });
+
+        Route::middleware('auth:admin')->group(function (): void {
+            Route::view('/', 'admin.home')->name('admin.home');
+            Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
+        });
 
         Route::get('/_test/auth/admin/login/{admin}', function (Request $request, Admin $admin) use ($adminBoundaryProbePayload): JsonResponse {
             abort_unless(app()->runningInConsole(), 404);
@@ -41,5 +50,13 @@ if (is_string($adminHost) && $adminHost !== '') {
         });
     });
 } else {
-    Route::view('/', 'admin.home')->name('admin.home');
+    Route::middleware('guest:admin')->group(function (): void {
+        Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('admin.login');
+        Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('admin.login.store');
+    });
+
+    Route::middleware('auth:admin')->group(function (): void {
+        Route::view('/', 'admin.home')->name('admin.home');
+        Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
+    });
 }

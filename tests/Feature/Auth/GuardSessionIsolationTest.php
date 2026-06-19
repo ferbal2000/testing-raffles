@@ -28,6 +28,11 @@ function responseCookies(TestResponse $response): array
     return $cookies;
 }
 
+function mergedBrowserCookies(array $cookies, TestResponse $response): array
+{
+    return array_merge($cookies, responseCookies($response));
+}
+
 function rememberCookie(array $cookies, string $guard): array
 {
     $prefix = "remember_{$guard}_";
@@ -138,4 +143,61 @@ it('requires guard and session assertions instead of trusting host routing alone
         ->assertJsonPath('guard', 'admin')
         ->assertJsonPath('authenticated', false)
         ->assertJsonPath('session_cookie', config('session.identity_boundary.cookies.admin'));
+});
+
+it('keeps the public boundary unauthenticated before and after the admin login lifecycle', function () {
+    $admin = Admin::factory()->create();
+
+    $publicProbeBefore = $this->withServerVariables(['HTTP_HOST' => boundaryHost('app.public_url')])
+        ->get(boundaryUrl('app.public_url', '/_test/auth/probe'));
+
+    $publicProbeBefore->assertOk()
+        ->assertJsonPath('boundary', 'public')
+        ->assertJsonPath('guard', 'web')
+        ->assertJsonPath('authenticated', false);
+
+    $loginResponse = $this->withServerVariables(['HTTP_HOST' => boundaryHost('app.admin_url')])
+        ->post(boundaryUrl('app.admin_url', '/login'), [
+            'email' => $admin->email,
+            'password' => 'password',
+            'remember' => '1',
+        ]);
+
+    $loginResponse->assertRedirect(route('admin.home'));
+
+    $adminBrowserCookies = responseCookies($loginResponse);
+
+    expect(rememberCookie($adminBrowserCookies, 'admin'))->not->toBe([]);
+
+    $this->assertAuthenticatedAs($admin, 'admin');
+    $this->assertGuest('web');
+
+    $publicProbeAfterLogin = $this->withServerVariables(['HTTP_HOST' => boundaryHost('app.public_url')])
+        ->withCookies($adminBrowserCookies)
+        ->get(boundaryUrl('app.public_url', '/_test/auth/probe'));
+
+    $publicProbeAfterLogin->assertOk()
+        ->assertJsonPath('boundary', 'public')
+        ->assertJsonPath('guard', 'web')
+        ->assertJsonPath('authenticated', false);
+
+    $logoutResponse = $this->withServerVariables(['HTTP_HOST' => boundaryHost('app.admin_url')])
+        ->withCookies($adminBrowserCookies)
+        ->post(boundaryUrl('app.admin_url', '/logout'));
+
+    $logoutResponse->assertRedirect(route('admin.login'));
+
+    $browserCookiesAfterLogout = mergedBrowserCookies($adminBrowserCookies, $logoutResponse);
+
+    $this->assertGuest('admin');
+    $this->assertGuest('web');
+
+    $publicProbeAfterLogout = $this->withServerVariables(['HTTP_HOST' => boundaryHost('app.public_url')])
+        ->withCookies($browserCookiesAfterLogout)
+        ->get(boundaryUrl('app.public_url', '/_test/auth/probe'));
+
+    $publicProbeAfterLogout->assertOk()
+        ->assertJsonPath('boundary', 'public')
+        ->assertJsonPath('guard', 'web')
+        ->assertJsonPath('authenticated', false);
 });
