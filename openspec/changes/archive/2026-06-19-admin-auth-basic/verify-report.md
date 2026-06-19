@@ -127,3 +127,35 @@ Coverage analysis skipped — no coverage tool detected.
 ### Verdict
 PASS
 All 11 change-specific spec scenarios are covered and pass, and the full canonical `bin/test` suite is green.
+
+---
+
+## Follow-up Bugfix Audit (2026-06-19)
+
+Manual browser smoke testing later disproved the earlier middleware-priority-only fix: resolving `session.store` before an admin request could still pin Laravel to the public session cookie and recreate the admin login redirect loop under `php artisan serve` / `bin/dev`.
+
+### Corrective Change
+- Moved boundary classification and session-cookie application into prepended global middleware.
+- Kept `ApplyIdentityBoundary` pure: it now classifies the request boundary only.
+- Added `ApplyIdentityBoundarySessionCookie` to set `config('session.cookie')` early and rename any already-resolved `session` / `session.store` singleton before `StartSession` reads cookies.
+
+### Regression Coverage
+- `tests/Feature/Auth/AdminSessionAuthenticationTest.php > it keeps admin auth on the admin session cookie even if the session store resolved early`
+- Existing admin browser cookie replay and stale-public-cookie regressions remain green.
+- `tests/Feature/Auth/AdminIdentityBoundaryTest.php > it classifies the boundary and applies the session cookie from global middleware before routing`
+
+### Follow-up Verification
+```text
+$ ./bin/test tests/Feature/Auth/AdminIdentityBoundaryTest.php tests/Feature/Auth/AdminSessionAuthenticationTest.php tests/Feature/Auth/GuardSessionIsolationTest.php tests/Feature/Routing/HostSeparationTest.php
+- 21 passed (143 assertions)
+
+$ ./bin/test
+- 44 passed (217 assertions)
+
+$ docker compose run --rm -T app ./vendor/bin/pint --test app/Http/Middleware/ApplyIdentityBoundary.php app/Http/Middleware/ApplyIdentityBoundarySessionCookie.php bootstrap/app.php tests/Feature/Auth/AdminIdentityBoundaryTest.php tests/Feature/Auth/AdminSessionAuthenticationTest.php
+- PASS
+```
+
+### Live Probe Note
+- Live `GET http://admin.raffles.test:8000/login` now returns `200 OK` and sets `raffles-admin-session` (not `raffles-public-session`).
+- Full live login replay still requires a known local admin credential and was not automated here to avoid mutating developer data.

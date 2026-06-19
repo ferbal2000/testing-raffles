@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\ApplyIdentityBoundary;
+use App\Http\Middleware\ApplyIdentityBoundarySessionCookie;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -32,8 +33,9 @@ return Application::configure(basePath: dirname(__DIR__))
             return null;
         });
 
-        $middleware->web(prepend: [
+        $middleware->prepend([
             ApplyIdentityBoundary::class,
+            ApplyIdentityBoundarySessionCookie::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
