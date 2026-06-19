@@ -17,6 +17,21 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->redirectGuestsTo(function (Request $request): ?string {
+            if ($request->expectsJson()) {
+                return null;
+            }
+
+            $boundary = $request->attributes->get('identity_boundary');
+            $adminHost = parse_url((string) config('app.admin_url'), PHP_URL_HOST);
+
+            if ($boundary === 'admin' && is_string($adminHost) && $adminHost !== '' && $request->getHost() === $adminHost) {
+                return route('admin.login');
+            }
+
+            return null;
+        });
+
         $middleware->web(prepend: [
             ApplyIdentityBoundary::class,
         ]);
