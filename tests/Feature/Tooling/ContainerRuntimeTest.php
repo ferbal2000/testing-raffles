@@ -40,3 +40,38 @@ it('declares bin test as the canonical local test command', function () {
         ->toContain('command: "bin/test"')
         ->toContain('test_command: "bin/test"');
 });
+
+it('pins phpunit database settings to the isolated postgres testing database', function () {
+    $phpunitConfig = file_get_contents(projectPath('phpunit.xml'));
+
+    expect($phpunitConfig)
+        ->toContain('<env name="DB_CONNECTION" value="pgsql"/>')
+        ->toContain('<env name="DB_HOST" value="db"/>')
+        ->toContain('<env name="DB_PORT" value="5432"/>')
+        ->toContain('<env name="DB_DATABASE" value="raffles_testing"/>')
+        ->toContain('<env name="DB_USERNAME" value="postgres"/>');
+});
+
+it('forces bin test to boot with explicit testing database overrides', function () {
+    $script = file_get_contents(projectPath('bin/test'));
+
+    expect($script)
+        ->toContain('APP_ENV=testing')
+        ->toContain('TEST_DB_CONNECTION="pgsql"')
+        ->toContain('DB_CONNECTION="$TEST_DB_CONNECTION"')
+        ->toContain('DB_DATABASE="$TEST_DB_DATABASE"')
+        ->toContain('CREATE DATABASE')
+        ->toContain('./vendor/bin/pest "$@"');
+});
+
+it('guards bin test against reusing the normal development database', function () {
+    $script = file_get_contents(projectPath('bin/test'));
+
+    expect($script)
+        ->toContain('DB_TEST_DATABASE')
+        ->toContain('DEV_DB_DATABASE')
+        ->toContain('Refusing to run tests against the development database')
+        ->toContain('TEST_DB_DATABASE == DEV_DB_DATABASE')
+        ->toContain('postgres|template0|template1')
+        ->toContain('exit 1');
+});
