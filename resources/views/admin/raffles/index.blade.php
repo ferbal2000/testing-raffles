@@ -5,6 +5,21 @@
             <p class="text-slate-600">{{ __('admin-raffles.index.description') }}</p>
         </header>
 
+        <div class="flex items-center justify-between gap-4">
+            <a
+                href="{{ route('admin.raffles.create') }}"
+                class="inline-flex items-center justify-center rounded-lg bg-slate-950 px-4 py-2 font-medium text-white transition hover:bg-slate-800"
+            >
+                {{ __('admin-raffles.index.actions.create') }}
+            </a>
+        </div>
+
+        @if (session('admin.raffles.create_success'))
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {{ session('admin.raffles.create_success') }}
+            </div>
+        @endif
+
         @if ($raffles->isEmpty())
             <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6">
                 <p class="text-lg font-medium text-slate-900">{{ __('admin-raffles.index.empty.title') }}</p>

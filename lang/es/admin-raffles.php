@@ -5,6 +5,9 @@ return [
         'title' => 'Sorteos',
         'description' => 'Revisá los sorteos persistidos desde la administración.',
         'placeholder' => 'Sin definir',
+        'actions' => [
+            'create' => 'Crear sorteo',
+        ],
         'columns' => [
             'id' => 'ID',
             'status' => 'Estado',
@@ -15,6 +18,27 @@ return [
         'empty' => [
             'title' => 'Todavía no hay sorteos.',
             'description' => 'Aún no hay sorteos cargados.',
+        ],
+    ],
+    'create' => [
+        'title' => 'Crear sorteo',
+        'description' => 'Cargá opcionalmente las fechas de disponibilidad iniciales del sorteo.',
+        'fields' => [
+            'starts_at' => [
+                'label' => 'Inicio',
+                'help' => 'Dejalo vacío si el sorteo no tiene fecha de inicio todavía.',
+            ],
+            'ends_at' => [
+                'label' => 'Fin',
+                'help' => 'Dejalo vacío si el sorteo no tiene fecha de cierre todavía.',
+            ],
+        ],
+        'actions' => [
+            'submit' => 'Crear sorteo',
+            'cancel' => 'Volver al listado',
+        ],
+        'flash' => [
+            'success' => 'El sorteo se creó en borrador.',
         ],
     ],
 ];
