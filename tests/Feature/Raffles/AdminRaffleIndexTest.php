@@ -1,0 +1,130 @@
+<?php
+
+use App\Models\Admin;
+use App\Models\Raffle;
+use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
+
+uses(RefreshDatabase::class);
+
+function raffleAdminHost(): string
+{
+    return (string) parse_url((string) config('app.admin_url'), PHP_URL_HOST);
+}
+
+function raffleAdminUrl(string $path = '/'): string
+{
+    return rtrim((string) config('app.admin_url'), '/').$path;
+}
+
+function raffleDateTime(?CarbonImmutable $value): string
+{
+    return $value?->format('Y-m-d H:i') ?? 'Sin definir';
+}
+
+function raffleIndexResponse(?Admin $admin = null, array $server = []): TestResponse
+{
+    $request = test();
+
+    if ($admin !== null) {
+        $request = $request->actingAs($admin, 'admin');
+    }
+
+    return $request
+        ->withServerVariables(array_merge(['HTTP_HOST' => raffleAdminHost()], $server))
+        ->get(raffleAdminUrl('/raffles'));
+}
+
+function persistedRaffleForIndex(string $status, ?CarbonImmutable $startsAt, ?CarbonImmutable $endsAt, CarbonImmutable $createdAt): Raffle
+{
+    $factory = match ($status) {
+        'published' => Raffle::factory()->published(),
+        'closed' => Raffle::factory()->closed(),
+        default => Raffle::factory(),
+    };
+
+    $raffle = $factory->create([
+        'starts_at' => $startsAt,
+        'ends_at' => $endsAt,
+    ]);
+
+    $raffle->forceFill(['created_at' => $createdAt])->save();
+
+    return $raffle->fresh();
+}
+
+it('redirects guests to the admin login page for html raffle index requests', function () {
+    raffleIndexResponse()
+        ->assertRedirect(route('admin.login'));
+});
+
+it('returns 401 for unauthenticated json raffle index requests', function () {
+    raffleIndexResponse(server: [
+        'HTTP_ACCEPT' => 'application/json',
+    ])
+        ->assertUnauthorized();
+});
+
+it('shows the raffle index page to authenticated admins', function () {
+    $admin = Admin::factory()->create();
+
+    raffleIndexResponse($admin)
+        ->assertOk();
+});
+
+it('shows an explicit empty state when no raffles exist', function () {
+    $admin = Admin::factory()->create();
+
+    raffleIndexResponse($admin)
+        ->assertOk()
+        ->assertSeeText('Aún no hay sorteos cargados.')
+        ->assertDontSeeText('Borrador');
+});
+
+it('lists persisted raffles in newest-first order with the required fields', function () {
+    $admin = Admin::factory()->create();
+
+    $olderStartsAt = CarbonImmutable::parse('2026-06-20 10:00:00');
+    $olderEndsAt = CarbonImmutable::parse('2026-06-25 18:00:00');
+    $olderCreatedAt = CarbonImmutable::parse('2026-06-18 09:15:00');
+
+    $olderRaffle = persistedRaffleForIndex('draft', $olderStartsAt, $olderEndsAt, $olderCreatedAt);
+
+    $newerStartsAt = CarbonImmutable::parse('2026-06-21 11:00:00');
+    $newerEndsAt = CarbonImmutable::parse('2026-06-28 19:30:00');
+    $newerCreatedAt = CarbonImmutable::parse('2026-06-19 14:45:00');
+
+    $newerRaffle = persistedRaffleForIndex('closed', $newerStartsAt, $newerEndsAt, $newerCreatedAt);
+
+    raffleIndexResponse($admin)
+        ->assertOk()
+        ->assertSeeInOrder([
+            (string) $newerRaffle->id,
+            'closed',
+            raffleDateTime($newerStartsAt),
+            raffleDateTime($newerEndsAt),
+            raffleDateTime($newerCreatedAt),
+            (string) $olderRaffle->id,
+            'draft',
+            raffleDateTime($olderStartsAt),
+            raffleDateTime($olderEndsAt),
+            raffleDateTime($olderCreatedAt),
+        ], escape: false);
+});
+
+it('renders safe placeholders for nullable raffle availability values', function () {
+    $admin = Admin::factory()->create();
+    $createdAt = CarbonImmutable::parse('2026-06-20 08:00:00');
+
+    $raffle = persistedRaffleForIndex('published', null, null, $createdAt);
+
+    raffleIndexResponse($admin)
+        ->assertOk()
+        ->assertSeeText((string) $raffle->id)
+        ->assertSeeText('published')
+        ->assertSeeText(raffleDateTime($createdAt))
+        ->assertSeeText('Sin definir')
+        ->assertDontSeeText('2026-06-20 10:00')
+        ->assertDontSeeText('2026-06-25 18:00');
+});
