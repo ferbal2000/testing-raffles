@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Admin\RaffleController;
 use App\Models\Admin;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,6 +33,7 @@ if (is_string($adminHost) && $adminHost !== '') {
 
         Route::middleware('auth:admin')->group(function (): void {
             Route::view('/', 'admin.home')->name('admin.home');
+            Route::get('/raffles', [RaffleController::class, 'index'])->name('admin.raffles.index');
             Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
         });
 
@@ -57,6 +59,7 @@ if (is_string($adminHost) && $adminHost !== '') {
 
     Route::middleware('auth:admin')->group(function (): void {
         Route::view('/', 'admin.home')->name('admin.home');
+        Route::get('/raffles', [RaffleController::class, 'index'])->name('admin.raffles.index');
         Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
     });
 }
