@@ -34,6 +34,8 @@ if (is_string($adminHost) && $adminHost !== '') {
         Route::middleware('auth:admin')->group(function (): void {
             Route::view('/', 'admin.home')->name('admin.home');
             Route::get('/raffles', [RaffleController::class, 'index'])->name('admin.raffles.index');
+            Route::get('/raffles/create', [RaffleController::class, 'create'])->name('admin.raffles.create');
+            Route::post('/raffles', [RaffleController::class, 'store'])->name('admin.raffles.store');
             Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
         });
 
@@ -60,6 +62,8 @@ if (is_string($adminHost) && $adminHost !== '') {
     Route::middleware('auth:admin')->group(function (): void {
         Route::view('/', 'admin.home')->name('admin.home');
         Route::get('/raffles', [RaffleController::class, 'index'])->name('admin.raffles.index');
+        Route::get('/raffles/create', [RaffleController::class, 'create'])->name('admin.raffles.create');
+        Route::post('/raffles', [RaffleController::class, 'store'])->name('admin.raffles.store');
         Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
     });
 }

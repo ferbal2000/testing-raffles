@@ -70,7 +70,9 @@ it('shows the raffle index page to authenticated admins', function () {
     $admin = Admin::factory()->create();
 
     raffleIndexResponse($admin)
-        ->assertOk();
+        ->assertOk()
+        ->assertSee(route('admin.raffles.create'), escape: false)
+        ->assertSeeText('Crear sorteo');
 });
 
 it('shows an explicit empty state when no raffles exist', function () {
@@ -127,4 +129,26 @@ it('renders safe placeholders for nullable raffle availability values', function
         ->assertSeeText('Sin definir')
         ->assertDontSeeText('2026-06-20 10:00')
         ->assertDontSeeText('2026-06-25 18:00');
+});
+
+it('shows a scoped create success flash after a successful create redirect', function () {
+    $admin = Admin::factory()->create();
+
+    test()
+        ->withSession([
+            'admin.raffles.create_success' => 'El sorteo se creó en borrador.',
+        ])
+        ->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => raffleAdminHost()])
+        ->get(raffleAdminUrl('/raffles'))
+        ->assertOk()
+        ->assertSeeText('El sorteo se creó en borrador.');
+});
+
+it('does not show a create success flash without the scoped session key', function () {
+    $admin = Admin::factory()->create();
+
+    raffleIndexResponse($admin)
+        ->assertOk()
+        ->assertDontSeeText('El sorteo se creó en borrador.');
 });
