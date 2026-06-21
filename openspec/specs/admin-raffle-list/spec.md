@@ -54,9 +54,9 @@ The system MUST show an explicit empty state when no raffles exist. This slice M
 - WHEN the page is evaluated for this slice
 - THEN it exposes read-only listing behavior without requiring wider dashboard or navigation changes
 
-### Requirement: Admin raffle index provides create entry and success feedback
+### Requirement: Admin raffle index provides create and edit entry points with scoped success feedback
 
-The system MUST provide a minimal create entry point from the admin raffle index to `GET /raffles/create`. After a successful raffle create redirect, the index MUST render a scoped success flash for that completed action only. This slice MUST NOT add broader admin navigation or lifecycle actions.
+The system MUST provide a minimal create entry point from the admin raffle index to `GET /raffles/create`. The system MUST also provide a minimal per-row edit entry point to `GET /raffles/{raffle}/edit` for each persisted raffle shown on the index. After a successful raffle create or update redirect, the index MUST render a scoped success flash for that completed action only. This slice MUST NOT add broader admin navigation or lifecycle actions.
 
 #### Scenario: Admin uses the create entry point from the index
 
@@ -66,12 +66,24 @@ The system MUST provide a minimal create entry point from the admin raffle index
 
 #### Scenario: Index shows success feedback after create
 
-- GIVEN an authenticated admin is redirected to the raffle index after a successful create
+- GIVEN an admin is redirected to the index after create
 - WHEN the index page is rendered for that redirect
 - THEN the system shows a minimal success flash for the created raffle
 
+#### Scenario: Admin uses the edit entry point from the index
+
+- GIVEN one or more raffle records already exist
+- WHEN an authenticated admin opens the raffle index
+- THEN each persisted raffle row shows a minimal edit entry point linking to `GET /raffles/{raffle}/edit`
+
+#### Scenario: Index shows success feedback after update
+
+- GIVEN an authenticated admin is redirected to the raffle index after a successful update
+- WHEN the index page is rendered for that redirect
+- THEN the system shows a minimal success flash for the updated raffle
+
 #### Scenario: Index does not invent success feedback
 
-- GIVEN an authenticated admin opens the raffle index without a successful create redirect
+- GIVEN an authenticated admin opens the raffle index without a successful create or update redirect
 - WHEN the page is rendered
-- THEN the system does not show a create success flash
+- THEN the system does not show a create or update success flash

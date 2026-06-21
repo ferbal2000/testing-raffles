@@ -35,7 +35,9 @@ if (is_string($adminHost) && $adminHost !== '') {
             Route::view('/', 'admin.home')->name('admin.home');
             Route::get('/raffles', [RaffleController::class, 'index'])->name('admin.raffles.index');
             Route::get('/raffles/create', [RaffleController::class, 'create'])->name('admin.raffles.create');
+            Route::get('/raffles/{raffle}/edit', [RaffleController::class, 'edit'])->name('admin.raffles.edit');
             Route::post('/raffles', [RaffleController::class, 'store'])->name('admin.raffles.store');
+            Route::patch('/raffles/{raffle}', [RaffleController::class, 'update'])->name('admin.raffles.update');
             Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
         });
 
@@ -63,7 +65,9 @@ if (is_string($adminHost) && $adminHost !== '') {
         Route::view('/', 'admin.home')->name('admin.home');
         Route::get('/raffles', [RaffleController::class, 'index'])->name('admin.raffles.index');
         Route::get('/raffles/create', [RaffleController::class, 'create'])->name('admin.raffles.create');
+        Route::get('/raffles/{raffle}/edit', [RaffleController::class, 'edit'])->name('admin.raffles.edit');
         Route::post('/raffles', [RaffleController::class, 'store'])->name('admin.raffles.store');
+        Route::patch('/raffles/{raffle}', [RaffleController::class, 'update'])->name('admin.raffles.update');
         Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
     });
 }

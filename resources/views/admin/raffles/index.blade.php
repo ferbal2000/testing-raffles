@@ -20,6 +20,12 @@
             </div>
         @endif
 
+        @if (session('admin.raffles.update_success'))
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {{ session('admin.raffles.update_success') }}
+            </div>
+        @endif
+
         @if ($raffles->isEmpty())
             <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6">
                 <p class="text-lg font-medium text-slate-900">{{ __('admin-raffles.index.empty.title') }}</p>
@@ -35,6 +41,7 @@
                             <th scope="col" class="px-4 py-3 font-medium">{{ __('admin-raffles.index.columns.starts_at') }}</th>
                             <th scope="col" class="px-4 py-3 font-medium">{{ __('admin-raffles.index.columns.ends_at') }}</th>
                             <th scope="col" class="px-4 py-3 font-medium">{{ __('admin-raffles.index.columns.created_at') }}</th>
+                            <th scope="col" class="px-4 py-3 font-medium">{{ __('admin-raffles.index.columns.actions') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 bg-white">
@@ -45,6 +52,14 @@
                                 <td class="whitespace-nowrap px-4 py-3">{{ $raffle->starts_at?->format('Y-m-d H:i') ?? __('admin-raffles.index.placeholder') }}</td>
                                 <td class="whitespace-nowrap px-4 py-3">{{ $raffle->ends_at?->format('Y-m-d H:i') ?? __('admin-raffles.index.placeholder') }}</td>
                                 <td class="whitespace-nowrap px-4 py-3">{{ $raffle->created_at?->format('Y-m-d H:i') ?? __('admin-raffles.index.placeholder') }}</td>
+                                <td class="whitespace-nowrap px-4 py-3">
+                                    <a
+                                        href="{{ route('admin.raffles.edit', $raffle) }}"
+                                        class="inline-flex items-center justify-center rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-100"
+                                    >
+                                        {{ __('admin-raffles.index.actions.edit') }}
+                                    </a>
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>
