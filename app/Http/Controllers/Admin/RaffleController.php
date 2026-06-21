@@ -22,6 +22,13 @@ final class RaffleController extends Controller
         return view('admin.raffles.create');
     }
 
+    public function edit(Raffle $raffle): View
+    {
+        return view('admin.raffles.edit', [
+            'raffle' => $raffle,
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -37,5 +44,22 @@ final class RaffleController extends Controller
         return redirect()
             ->route('admin.raffles.index')
             ->with('admin.raffles.create_success', trans('admin-raffles.create.flash.success'));
+    }
+
+    public function update(Request $request, Raffle $raffle): RedirectResponse
+    {
+        $validated = $request->validate([
+            'starts_at' => ['nullable', 'date_format:Y-m-d\TH:i'],
+            'ends_at' => ['nullable', 'date_format:Y-m-d\TH:i'],
+        ]);
+
+        $raffle->update([
+            'starts_at' => $validated['starts_at'] ?? null,
+            'ends_at' => $validated['ends_at'] ?? null,
+        ]);
+
+        return redirect()
+            ->route('admin.raffles.index')
+            ->with('admin.raffles.update_success', trans('admin-raffles.edit.flash.success'));
     }
 }

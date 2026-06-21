@@ -68,11 +68,14 @@ it('returns 401 for unauthenticated json raffle index requests', function () {
 
 it('shows the raffle index page to authenticated admins', function () {
     $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
 
     raffleIndexResponse($admin)
         ->assertOk()
         ->assertSee(route('admin.raffles.create'), escape: false)
-        ->assertSeeText('Crear sorteo');
+        ->assertSeeText('Crear sorteo')
+        ->assertSee(route('admin.raffles.edit', $raffle), escape: false)
+        ->assertSeeText('Editar');
 });
 
 it('shows an explicit empty state when no raffles exist', function () {
@@ -145,10 +148,26 @@ it('shows a scoped create success flash after a successful create redirect', fun
         ->assertSeeText('El sorteo se creó en borrador.');
 });
 
-it('does not show a create success flash without the scoped session key', function () {
+it('shows a scoped update success flash after a successful update redirect', function () {
+    $admin = Admin::factory()->create();
+
+    test()
+        ->withSession([
+            'admin.raffles.update_success' => 'El sorteo se actualizó.',
+        ])
+        ->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => raffleAdminHost()])
+        ->get(raffleAdminUrl('/raffles'))
+        ->assertOk()
+        ->assertSeeText('El sorteo se actualizó.')
+        ->assertDontSeeText('El sorteo se creó en borrador.');
+});
+
+it('does not show create or update success flashes without scoped session keys', function () {
     $admin = Admin::factory()->create();
 
     raffleIndexResponse($admin)
         ->assertOk()
-        ->assertDontSeeText('El sorteo se creó en borrador.');
+        ->assertDontSeeText('El sorteo se creó en borrador.')
+        ->assertDontSeeText('El sorteo se actualizó.');
 });
