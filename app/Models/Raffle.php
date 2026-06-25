@@ -4,14 +4,24 @@ namespace App\Models;
 
 use App\Enums\RaffleStatus;
 use App\Exceptions\InvalidRaffleTransition;
+use Carbon\CarbonImmutable;
 use Database\Factories\RaffleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LogicException;
 
-#[Fillable(['status', 'starts_at', 'ends_at'])]
+#[Fillable([
+    'status',
+    'starts_at',
+    'ends_at',
+    'participation_opened_at',
+    'participation_closed_at',
+    'participation_closed_reason',
+    'participation_closed_by_admin_id',
+])]
 class Raffle extends Model
 {
     /** @use HasFactory<RaffleFactory> */
@@ -28,7 +38,14 @@ class Raffle extends Model
             'status' => RaffleStatus::class,
             'starts_at' => 'immutable_datetime',
             'ends_at' => 'immutable_datetime',
+            'participation_opened_at' => 'immutable_datetime',
+            'participation_closed_at' => 'immutable_datetime',
         ];
+    }
+
+    public function admin(): BelongsTo
+    {
+        return $this->belongsTo(Admin::class, 'participation_closed_by_admin_id');
     }
 
     protected static function booted(): void
@@ -58,6 +75,55 @@ class Raffle extends Model
         }
 
         $this->forceFill(['status' => RaffleStatus::Closed])->save();
+    }
+
+    public function canAcceptParticipants(): bool
+    {
+        return $this->status === RaffleStatus::Published
+            && $this->participation_opened_at !== null
+            && $this->participation_closed_at === null;
+    }
+
+    public function canOpenParticipation(): bool
+    {
+        return $this->status === RaffleStatus::Published
+            && $this->participation_opened_at === null
+            && $this->participation_closed_at === null;
+    }
+
+    public function canCloseParticipation(): bool
+    {
+        return $this->status === RaffleStatus::Published
+            && $this->participation_opened_at !== null
+            && $this->participation_closed_at === null;
+    }
+
+    public function openParticipation(CarbonImmutable $openedAt): void
+    {
+        $this->ensureIsPersisted();
+
+        if (! $this->canOpenParticipation()) {
+            throw InvalidRaffleTransition::from($this->status->value, 'participation_open');
+        }
+
+        $this->forceFill([
+            'participation_opened_at' => $openedAt,
+        ])->save();
+    }
+
+    public function closeParticipation(CarbonImmutable $closedAt, string $reason = 'admin_closed', ?Admin $admin = null): void
+    {
+        $this->ensureIsPersisted();
+
+        if (! $this->canCloseParticipation()) {
+            throw InvalidRaffleTransition::from($this->status->value, 'participation_close');
+        }
+
+        $this->forceFill([
+            'participation_closed_at' => $closedAt,
+            'participation_closed_reason' => $reason,
+            'participation_closed_by_admin_id' => $admin?->getKey(),
+        ])->save();
     }
 
     /**
