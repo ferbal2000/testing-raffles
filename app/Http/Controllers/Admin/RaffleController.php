@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exceptions\InvalidRaffleTransition;
 use App\Http\Controllers\Controller;
+use App\Models\Admin;
 use App\Models\Raffle;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -61,5 +64,44 @@ final class RaffleController extends Controller
         return redirect()
             ->route('admin.raffles.index')
             ->with('admin.raffles.update_success', trans('admin-raffles.edit.flash.success'));
+    }
+
+    public function openParticipation(Raffle $raffle): RedirectResponse
+    {
+        try {
+            $raffle->openParticipation(CarbonImmutable::now());
+        } catch (InvalidRaffleTransition $exception) {
+            return redirect()
+                ->route('admin.raffles.index')
+                ->withErrors(['participation' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('admin.raffles.index')
+            ->with('admin.raffles.participation_open_success', trans('admin-raffles.index.flash.participation_open_success'));
+    }
+
+    public function closeParticipation(Request $request, Raffle $raffle): RedirectResponse
+    {
+        try {
+            $raffle->closeParticipation(CarbonImmutable::now(), 'admin_closed', $this->adminActor($request));
+        } catch (InvalidRaffleTransition $exception) {
+            return redirect()
+                ->route('admin.raffles.index')
+                ->withErrors(['participation' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('admin.raffles.index')
+            ->with('admin.raffles.participation_close_success', trans('admin-raffles.index.flash.participation_close_success'));
+    }
+
+    private function adminActor(Request $request): Admin
+    {
+        $admin = $request->user('admin');
+
+        abort_unless($admin instanceof Admin, 403);
+
+        return $admin;
     }
 }

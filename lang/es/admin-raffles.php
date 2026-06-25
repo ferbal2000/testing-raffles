@@ -8,6 +8,12 @@ return [
         'actions' => [
             'create' => 'Crear sorteo',
             'edit' => 'Editar',
+            'open_participation' => 'Abrir participación',
+            'close_participation' => 'Cerrar participación',
+        ],
+        'flash' => [
+            'participation_open_success' => 'La participación del sorteo se abrió.',
+            'participation_close_success' => 'La participación del sorteo se cerró.',
         ],
         'columns' => [
             'id' => 'ID',

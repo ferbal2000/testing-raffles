@@ -163,11 +163,81 @@ it('shows a scoped update success flash after a successful update redirect', fun
         ->assertDontSeeText('El sorteo se creó en borrador.');
 });
 
+it('shows participation actions only for eligible raffle rows', function () {
+    $admin = Admin::factory()->create();
+    $openableRaffle = Raffle::factory()->published()->create();
+    $closableRaffle = Raffle::factory()->published()->openedForParticipation()->create();
+    $draftRaffle = Raffle::factory()->create();
+    $closedRaffle = Raffle::factory()->published()->openedForParticipation()->create();
+    $closedRaffle->close();
+    $participationClosedRaffle = Raffle::factory()->published()->participationClosed()->create();
+
+    raffleIndexResponse($admin)
+        ->assertOk()
+        ->assertSee(route('admin.raffles.participation.open', $openableRaffle), escape: false)
+        ->assertSeeText('Abrir participación')
+        ->assertSee(route('admin.raffles.participation.close', $closableRaffle), escape: false)
+        ->assertSeeText('Cerrar participación')
+        ->assertDontSee(route('admin.raffles.participation.open', $draftRaffle), escape: false)
+        ->assertDontSee(route('admin.raffles.participation.close', $draftRaffle), escape: false)
+        ->assertDontSee(route('admin.raffles.participation.open', $closedRaffle), escape: false)
+        ->assertDontSee(route('admin.raffles.participation.close', $closedRaffle), escape: false)
+        ->assertDontSee(route('admin.raffles.participation.open', $participationClosedRaffle), escape: false)
+        ->assertDontSee(route('admin.raffles.participation.close', $participationClosedRaffle), escape: false);
+});
+
+it('shows a scoped participation open success flash after a matching redirect', function () {
+    $admin = Admin::factory()->create();
+
+    test()
+        ->withSession([
+            'admin.raffles.participation_open_success' => 'La participación del sorteo se abrió.',
+        ])
+        ->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => raffleAdminHost()])
+        ->get(raffleAdminUrl('/raffles'))
+        ->assertOk()
+        ->assertSeeText('La participación del sorteo se abrió.')
+        ->assertDontSeeText('La participación del sorteo se cerró.');
+});
+
+it('shows a scoped participation close success flash after a matching redirect', function () {
+    $admin = Admin::factory()->create();
+
+    test()
+        ->withSession([
+            'admin.raffles.participation_close_success' => 'La participación del sorteo se cerró.',
+        ])
+        ->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => raffleAdminHost()])
+        ->get(raffleAdminUrl('/raffles'))
+        ->assertOk()
+        ->assertSeeText('La participación del sorteo se cerró.')
+        ->assertDontSeeText('La participación del sorteo se abrió.');
+});
+
+it('shows the controller-reported participation error flashed by invalid transitions', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => raffleAdminHost()])
+        ->from(route('admin.raffles.index'))
+        ->post(raffleAdminUrl("/raffles/{$raffle->id}/participation/open"))
+        ->assertRedirect(route('admin.raffles.index'));
+
+    raffleIndexResponse($admin)
+        ->assertOk()
+        ->assertSeeText('Cannot transition raffle from [draft] to [participation_open].');
+});
+
 it('does not show create or update success flashes without scoped session keys', function () {
     $admin = Admin::factory()->create();
 
     raffleIndexResponse($admin)
         ->assertOk()
         ->assertDontSeeText('El sorteo se creó en borrador.')
-        ->assertDontSeeText('El sorteo se actualizó.');
+        ->assertDontSeeText('El sorteo se actualizó.')
+        ->assertDontSeeText('La participación del sorteo se abrió.')
+        ->assertDontSeeText('La participación del sorteo se cerró.');
 });
