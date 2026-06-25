@@ -1,12 +1,28 @@
 # Raffles Platform
 
-This repository contains the first foundation slice for the raffles platform.
+This repository contains a Laravel raffle platform with separated public and admin hosts.
 
-## Identity boundary for this slice
+## Quick path
+
+Use the project wrappers for local development:
+
+```bash
+bin/dev
+bin/artisan migrate
+bin/test
+```
+
+Then open:
+
+- Public site: `http://www.raffles.test:8000`
+- Admin site: `http://admin.raffles.test:8000`
+
+Do not use bare `localhost` for browser verification. Routes are intentionally host-scoped.
+
+## Identity boundary
 
 - `app/Models/User.php` and the `users` table currently represent PUBLIC website users only.
-- Admin identity is intentionally not implemented in PR 1 / Work Unit 1.
-- A later slice will add a separate admin-specific model, table, guard, provider, broker, and session boundary.
+- Admin identity uses a separate admin-specific model, table, guard, provider, broker, and session boundary.
 
 ## Local development runtime
 
@@ -27,9 +43,23 @@ Local development defaults to Docker Compose. Host PHP, Composer, and PostgreSQL
 
 - `bin/composer install` — install PHP dependencies inside the app container.
 - `bin/artisan key:generate` — generate the Laravel app key after the first install.
+- `bin/artisan migrate` — apply database migrations inside the app container.
 - `bin/test` — run the Pest/PHPUnit suite inside the app container.
 - `bin/dev` — start the local app + PostgreSQL runtime.
 - `bin/npm <command>` — optional Node/Vite wrapper for scaffold asset commands.
+
+### Data persistence
+
+Local PostgreSQL data is stored in the Docker volume `postgres-data`.
+
+| Command | Database data |
+|---------|---------------|
+| `bin/dev` | Preserved |
+| `docker compose up` | Preserved |
+| `docker compose down` | Preserved |
+| `docker compose down -v` | Deleted |
+
+`bin/dev` rebuilds the app image when needed, but it does not delete database records.
 
 ### First-time setup
 
@@ -61,6 +91,66 @@ The application container is published on port `8000`, but the HTTP surface is h
 - PostgreSQL: `localhost:5432`
 
 Do not use bare `localhost` for browser verification of the public/admin surfaces. Route resolution is intentionally bound to the configured hosts.
+
+### Frontend build
+
+Install frontend dependencies and verify the Vite/Tailwind build with:
+
+```bash
+bin/npm install
+bin/npm run build
+```
+
+`package-lock.json` is committed so frontend installs are reproducible. If `vite` is missing, run `bin/npm install` before retrying the build.
+
+## Browser verification
+
+### Admin raffle participation lifecycle
+
+The admin can manually open and close participation for published raffles. This lifecycle is separate from raffle publication.
+
+1. Start the app:
+
+   ```bash
+   bin/dev
+   ```
+
+2. Apply migrations if needed:
+
+   ```bash
+   bin/artisan migrate
+   ```
+
+3. Open the admin host:
+
+   ```text
+   http://admin.raffles.test:8000
+   ```
+
+4. Sign in as an admin and go to the raffle list.
+
+5. Use an existing published raffle, or create/publish one through the admin flow.
+
+6. From the raffle row, use the participation actions:
+
+   - Open participation.
+   - Close participation.
+
+Expected behavior:
+
+- A draft raffle cannot accept participants.
+- A published raffle does not accept participants until an admin opens participation.
+- An opened raffle can accept participants through the domain rule `canAcceptParticipants()`.
+- A closed raffle no longer accepts participants.
+- Invalid transitions, such as double-submit or stale-tab actions, show feedback on the admin list.
+
+Out of scope for the current browser flow:
+
+- Public participant registration.
+- Ticket purchases.
+- Payments.
+- Automatic closure when the funding target is reached.
+- Reopening participation.
 
 ### Host-separated smoke tests
 
