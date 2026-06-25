@@ -23,6 +23,10 @@ class RaffleFactory extends Factory
             'status' => RaffleStatus::Draft,
             'starts_at' => null,
             'ends_at' => null,
+            'participation_opened_at' => null,
+            'participation_closed_at' => null,
+            'participation_closed_reason' => null,
+            'participation_closed_by_admin_id' => null,
         ];
     }
 
@@ -46,6 +50,28 @@ class RaffleFactory extends Factory
         return $this->state(fn () => [
             'starts_at' => $startsAt,
             'ends_at' => $endsAt,
+        ]);
+    }
+
+    public function openedForParticipation(?CarbonImmutable $openedAt = null): static
+    {
+        return $this->state(fn () => [
+            'participation_opened_at' => $openedAt ?? CarbonImmutable::now(),
+            'participation_closed_at' => null,
+            'participation_closed_reason' => null,
+            'participation_closed_by_admin_id' => null,
+        ]);
+    }
+
+    public function participationClosed(?CarbonImmutable $openedAt = null, ?CarbonImmutable $closedAt = null, string $reason = 'admin_closed'): static
+    {
+        $openedAt ??= CarbonImmutable::now()->subHour();
+        $closedAt ??= $openedAt->addHour();
+
+        return $this->state(fn () => [
+            'participation_opened_at' => $openedAt,
+            'participation_closed_at' => $closedAt,
+            'participation_closed_reason' => $reason,
         ]);
     }
 }
