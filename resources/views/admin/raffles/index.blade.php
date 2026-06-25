@@ -26,6 +26,24 @@
             </div>
         @endif
 
+        @if (session('admin.raffles.participation_open_success'))
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {{ session('admin.raffles.participation_open_success') }}
+            </div>
+        @endif
+
+        @if (session('admin.raffles.participation_close_success'))
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {{ session('admin.raffles.participation_close_success') }}
+            </div>
+        @endif
+
+        @if ($errors->has('participation'))
+            <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                {{ $errors->first('participation') }}
+            </div>
+        @endif
+
         @if ($raffles->isEmpty())
             <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6">
                 <p class="text-lg font-medium text-slate-900">{{ __('admin-raffles.index.empty.title') }}</p>
@@ -53,12 +71,40 @@
                                 <td class="whitespace-nowrap px-4 py-3">{{ $raffle->ends_at?->format('Y-m-d H:i') ?? __('admin-raffles.index.placeholder') }}</td>
                                 <td class="whitespace-nowrap px-4 py-3">{{ $raffle->created_at?->format('Y-m-d H:i') ?? __('admin-raffles.index.placeholder') }}</td>
                                 <td class="whitespace-nowrap px-4 py-3">
-                                    <a
-                                        href="{{ route('admin.raffles.edit', $raffle) }}"
-                                        class="inline-flex items-center justify-center rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-100"
-                                    >
-                                        {{ __('admin-raffles.index.actions.edit') }}
-                                    </a>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <a
+                                            href="{{ route('admin.raffles.edit', $raffle) }}"
+                                            class="inline-flex items-center justify-center rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-100"
+                                        >
+                                            {{ __('admin-raffles.index.actions.edit') }}
+                                        </a>
+
+                                        @if ($raffle->canOpenParticipation())
+                                            <form method="POST" action="{{ route('admin.raffles.participation.open', $raffle) }}">
+                                                @csrf
+
+                                                <button
+                                                    type="submit"
+                                                    class="inline-flex items-center justify-center rounded-lg border border-emerald-300 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50"
+                                                >
+                                                    {{ __('admin-raffles.index.actions.open_participation') }}
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        @if ($raffle->canCloseParticipation())
+                                            <form method="POST" action="{{ route('admin.raffles.participation.close', $raffle) }}">
+                                                @csrf
+
+                                                <button
+                                                    type="submit"
+                                                    class="inline-flex items-center justify-center rounded-lg border border-amber-300 px-3 py-1.5 font-medium text-amber-700 transition hover:bg-amber-50"
+                                                >
+                                                    {{ __('admin-raffles.index.actions.close_participation') }}
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach

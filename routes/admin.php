@@ -38,6 +38,8 @@ if (is_string($adminHost) && $adminHost !== '') {
             Route::get('/raffles/{raffle}/edit', [RaffleController::class, 'edit'])->name('admin.raffles.edit');
             Route::post('/raffles', [RaffleController::class, 'store'])->name('admin.raffles.store');
             Route::patch('/raffles/{raffle}', [RaffleController::class, 'update'])->name('admin.raffles.update');
+            Route::post('/raffles/{raffle}/participation/open', [RaffleController::class, 'openParticipation'])->name('admin.raffles.participation.open');
+            Route::post('/raffles/{raffle}/participation/close', [RaffleController::class, 'closeParticipation'])->name('admin.raffles.participation.close');
             Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
         });
 
@@ -68,6 +70,8 @@ if (is_string($adminHost) && $adminHost !== '') {
         Route::get('/raffles/{raffle}/edit', [RaffleController::class, 'edit'])->name('admin.raffles.edit');
         Route::post('/raffles', [RaffleController::class, 'store'])->name('admin.raffles.store');
         Route::patch('/raffles/{raffle}', [RaffleController::class, 'update'])->name('admin.raffles.update');
+        Route::post('/raffles/{raffle}/participation/open', [RaffleController::class, 'openParticipation'])->name('admin.raffles.participation.open');
+        Route::post('/raffles/{raffle}/participation/close', [RaffleController::class, 'closeParticipation'])->name('admin.raffles.participation.close');
         Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
     });
 }

@@ -57,7 +57,7 @@ The system MUST allow a raffle to transition from `published` to `closed`, and i
 
 ### Requirement: Availability fields are basic lifecycle data
 
-The system MAY store `starts_at` and `ends_at` on a raffle as basic lifecycle and availability data, but this slice MUST NOT require automatic scheduling behavior or time-driven state changes.
+The system MAY store `starts_at` and `ends_at` on a raffle as basic lifecycle and availability metadata, but this slice MUST NOT require automatic scheduling behavior, time-driven state changes, or direct participation eligibility decisions from those fields. Participation eligibility SHALL be defined separately through the canonical participation domain rule.
 
 #### Scenario: Persist explicit availability values
 
@@ -70,6 +70,30 @@ The system MAY store `starts_at` and `ends_at` on a raffle as basic lifecycle an
 - GIVEN a persisted raffle has past or future `starts_at` or `ends_at` values
 - WHEN lifecycle behavior is evaluated in this slice
 - THEN status changes occur only through explicit publish or close actions
+
+#### Scenario: Availability dates do not open participation
+
+- GIVEN a published raffle has `starts_at` or `ends_at` values and a null `participation_opened_at`
+- WHEN participation eligibility is evaluated
+- THEN those dates do not make the raffle accept participants
+
+### Requirement: Published status governs publication only
+
+The system SHALL treat raffle `published` status as publication and visibility state, not as a standalone permission to accept participants.
+
+#### Scenario: Published raffle is visible before participation opens
+
+- GIVEN a raffle has status `published` and a null `participation_opened_at`
+- WHEN lifecycle behavior is evaluated
+- THEN the raffle remains published
+- AND it MUST NOT accept participants yet
+
+#### Scenario: Closed raffle cannot accept participants
+
+- GIVEN a raffle has status `closed`
+- WHEN lifecycle behavior is evaluated
+- THEN the raffle remains closed
+- AND it MUST NOT accept participants
 
 ### Requirement: Lifecycle verification uses the canonical test runner
 
