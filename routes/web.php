@@ -25,7 +25,7 @@ $publicBoundaryProbePayload = function (Request $request): array {
 
 if (is_string($publicHost) && $publicHost !== '') {
     Route::domain($publicHost)->group(function () use ($publicBoundaryProbePayload): void {
-        Route::view('/', 'public.home')->name('public.home');
+        Route::get('/', [RaffleController::class, 'index'])->name('public.home');
         Route::get('/raffles/{raffle}', [RaffleController::class, 'show'])
             ->whereNumber('raffle')
             ->name('public.raffles.show');
@@ -45,7 +45,7 @@ if (is_string($publicHost) && $publicHost !== '') {
         });
     });
 } else {
-    Route::view('/', 'public.home')->name('public.home');
+    Route::get('/', [RaffleController::class, 'index'])->name('public.home');
     Route::get('/raffles/{raffle}', [RaffleController::class, 'show'])
         ->whereNumber('raffle')
         ->name('public.raffles.show');
