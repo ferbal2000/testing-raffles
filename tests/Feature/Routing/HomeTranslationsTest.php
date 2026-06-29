@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Admin;
+use App\Models\Raffle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Lang;
 
@@ -21,9 +22,13 @@ beforeEach(function () {
 });
 
 it('renders the public home copy from translation keys', function () {
+    $raffle = Raffle::factory()->published()->create();
+
     Lang::addLines([
         'home.public.title' => 'Título público de prueba',
         'home.public.description' => 'Descripción pública de prueba',
+        'home.public.catalog_label' => 'Catálogo traducido',
+        'home.public.raffle_label' => 'Sorteo',
     ], 'es');
 
     $this->withServerVariables(['HTTP_HOST' => translationHostFor('app.public_url')])
@@ -31,8 +36,8 @@ it('renders the public home copy from translation keys', function () {
         ->assertOk()
         ->assertSeeText('Título público de prueba')
         ->assertSeeText('Descripción pública de prueba')
-        ->assertDontSee('/raffles/')
-        ->assertDontSee('href="/raffles/', false)
+        ->assertSeeText('Catálogo traducido')
+        ->assertSee('href="/raffles/'.$raffle->id.'"', false)
         ->assertDontSeeText('Participá en sorteos transparentes');
 });
 

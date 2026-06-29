@@ -57,13 +57,13 @@ The system SHALL display participation availability using `Raffle::canAcceptPart
 
 ### Requirement: Discovery and alternate routes stay out of scope
 
-The system MUST keep this slice limited to direct numeric detail access. It MUST NOT add a public catalog, home-page raffle links, or slug-only public detail routing. Future optional slug decoration MAY be added only after the numeric ID segment.
+The system MUST keep direct numeric detail access as the public raffle detail contract. The public home catalog MAY link to `/raffles/{id}` for discoverable published raffles. The system MUST NOT add slug-only public detail routing. Future optional slug decoration MAY be added only after the numeric ID segment.
 
-#### Scenario: Home page remains non-discovery only
+#### Scenario: Home page catalog links use numeric detail routes
 
 - GIVEN a public user opens the public home page
-- WHEN this slice is implemented
-- THEN no raffle catalog or raffle detail links are required
+- WHEN published raffles are shown in the catalog
+- THEN each raffle link targets `/raffles/{id}` for that raffle
 
 #### Scenario: Slug route is unsupported in this slice
 
