@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Public\RaffleController;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,6 +26,9 @@ $publicBoundaryProbePayload = function (Request $request): array {
 if (is_string($publicHost) && $publicHost !== '') {
     Route::domain($publicHost)->group(function () use ($publicBoundaryProbePayload): void {
         Route::view('/', 'public.home')->name('public.home');
+        Route::get('/raffles/{raffle}', [RaffleController::class, 'show'])
+            ->whereNumber('raffle')
+            ->name('public.raffles.show');
 
         Route::get('/_test/auth/public/login/{user}', function (Request $request, User $user) use ($publicBoundaryProbePayload): JsonResponse {
             abort_unless(app()->runningInConsole(), 404);
@@ -42,4 +46,7 @@ if (is_string($publicHost) && $publicHost !== '') {
     });
 } else {
     Route::view('/', 'public.home')->name('public.home');
+    Route::get('/raffles/{raffle}', [RaffleController::class, 'show'])
+        ->whereNumber('raffle')
+        ->name('public.raffles.show');
 }

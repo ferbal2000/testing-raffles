@@ -31,6 +31,8 @@ it('renders the public home copy from translation keys', function () {
         ->assertOk()
         ->assertSeeText('Título público de prueba')
         ->assertSeeText('Descripción pública de prueba')
+        ->assertDontSee('/raffles/')
+        ->assertDontSee('href="/raffles/', false)
         ->assertDontSeeText('Participá en sorteos transparentes');
 });
 
