@@ -7,6 +7,7 @@ use App\Exceptions\InvalidRaffleTransition;
 use Carbon\CarbonImmutable;
 use Database\Factories\RaffleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -82,6 +83,15 @@ class Raffle extends Model
         return $this->status === RaffleStatus::Published
             && $this->participation_opened_at !== null
             && $this->participation_closed_at === null;
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopePubliclyVisible(Builder $query): Builder
+    {
+        return $query->where('status', RaffleStatus::Published);
     }
 
     public function canOpenParticipation(): bool

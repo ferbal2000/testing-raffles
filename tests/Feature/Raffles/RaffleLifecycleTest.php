@@ -108,7 +108,9 @@ it('accepts participants only when a published raffle has opened participation a
     $eligibleRaffle = Raffle::factory()->published()->openedForParticipation()->create();
     $publishedButUnopenedRaffle = Raffle::factory()->published()->create();
 
-    expect($eligibleRaffle->canAcceptParticipants())->toBeTrue()
+    expect($eligibleRaffle->fresh()->status)->toBe(RaffleStatus::Published)
+        ->and($eligibleRaffle->canAcceptParticipants())->toBeTrue()
+        ->and($publishedButUnopenedRaffle->fresh()->status)->toBe(RaffleStatus::Published)
         ->and($publishedButUnopenedRaffle->canAcceptParticipants())->toBeFalse();
 });
 
@@ -118,8 +120,11 @@ it('does not accept participants for draft, participation-closed, or overall-clo
     $closedRaffle = Raffle::factory()->published()->openedForParticipation()->create();
     $closedRaffle->close();
 
-    expect($draftRaffle->canAcceptParticipants())->toBeFalse()
+    expect($draftRaffle->fresh()->status)->toBe(RaffleStatus::Draft)
+        ->and($draftRaffle->canAcceptParticipants())->toBeFalse()
+        ->and($participationClosedRaffle->fresh()->status)->toBe(RaffleStatus::Published)
         ->and($participationClosedRaffle->canAcceptParticipants())->toBeFalse()
+        ->and($closedRaffle->fresh()->status)->toBe(RaffleStatus::Closed)
         ->and($closedRaffle->canAcceptParticipants())->toBeFalse();
 });
 
@@ -183,4 +188,27 @@ it('does not close participation before it opens or after it is already closed',
 
     expect(fn () => $unopenedRaffle->closeParticipation($closedAt))->toThrow(InvalidRaffleTransition::class)
         ->and(fn () => $closedRaffle->closeParticipation($closedAt))->toThrow(InvalidRaffleTransition::class);
+});
+
+it('returns only published raffles from the public visibility scope', function () {
+    $publishedRaffle = Raffle::factory()->published()->create();
+    $draftRaffle = Raffle::factory()->create();
+    $closedRaffle = Raffle::factory()->closed()->create();
+
+    $visibleRaffleIds = Raffle::query()
+        ->publiclyVisible()
+        ->pluck('id')
+        ->all();
+
+    expect($visibleRaffleIds)->toBe([$publishedRaffle->id])
+        ->and($visibleRaffleIds)->not->toContain($draftRaffle->id)
+        ->and($visibleRaffleIds)->not->toContain($closedRaffle->id);
+});
+
+it('does not resolve draft or closed raffles through the public visibility scope', function () {
+    $draftRaffle = Raffle::factory()->create();
+    $closedRaffle = Raffle::factory()->closed()->create();
+
+    expect(Raffle::query()->publiclyVisible()->find($draftRaffle->id))->toBeNull()
+        ->and(Raffle::query()->publiclyVisible()->find($closedRaffle->id))->toBeNull();
 });
