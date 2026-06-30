@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use LogicException;
 
 #[Fillable([
@@ -47,6 +48,11 @@ class Raffle extends Model
     public function admin(): BelongsTo
     {
         return $this->belongsTo(Admin::class, 'participation_closed_by_admin_id');
+    }
+
+    public function registrations(): HasMany
+    {
+        return $this->hasMany(RaffleRegistration::class);
     }
 
     protected static function booted(): void

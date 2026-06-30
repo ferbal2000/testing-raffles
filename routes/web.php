@@ -29,6 +29,9 @@ if (is_string($publicHost) && $publicHost !== '') {
         Route::get('/raffles/{raffle}', [RaffleController::class, 'show'])
             ->whereNumber('raffle')
             ->name('public.raffles.show');
+        Route::post('/raffles/{raffle}/participation', [RaffleController::class, 'storeParticipation'])
+            ->whereNumber('raffle')
+            ->name('public.raffles.participation.store');
 
         Route::get('/_test/auth/public/login/{user}', function (Request $request, User $user) use ($publicBoundaryProbePayload): JsonResponse {
             abort_unless(app()->runningInConsole(), 404);
@@ -49,4 +52,7 @@ if (is_string($publicHost) && $publicHost !== '') {
     Route::get('/raffles/{raffle}', [RaffleController::class, 'show'])
         ->whereNumber('raffle')
         ->name('public.raffles.show');
+    Route::post('/raffles/{raffle}/participation', [RaffleController::class, 'storeParticipation'])
+        ->whereNumber('raffle')
+        ->name('public.raffles.participation.store');
 }
