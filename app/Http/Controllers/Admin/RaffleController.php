@@ -32,6 +32,17 @@ final class RaffleController extends Controller
         ]);
     }
 
+    public function registrations(Raffle $raffle): View
+    {
+        $raffle->load([
+            'registrations' => fn ($query) => $query->latest('id'),
+        ]);
+
+        return view('admin.raffles.registrations', [
+            'raffle' => $raffle,
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([

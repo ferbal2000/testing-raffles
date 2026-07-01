@@ -70,4 +70,22 @@ return [
             'success' => 'El sorteo se actualizó.',
         ],
     ],
+    'registrations' => [
+        'title' => 'Inscripciones del sorteo #:id',
+        'description' => 'Consultá las inscripciones ya registradas para este sorteo.',
+        'columns' => [
+            'name' => 'Nombre',
+            'email' => 'Email',
+            'created_at' => 'Registrada',
+            'linked_account' => 'Cuenta',
+        ],
+        'linked_account' => [
+            'yes' => 'Cuenta vinculada',
+            'no' => 'Sin cuenta vinculada',
+        ],
+        'empty' => [
+            'title' => 'Todavía no hay inscripciones para este sorteo.',
+            'description' => 'Cuando alguien se registre, la lista aparecerá acá.',
+        ],
+    ],
 ];
