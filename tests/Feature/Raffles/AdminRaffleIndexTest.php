@@ -8,16 +8,6 @@ use Illuminate\Testing\TestResponse;
 
 uses(RefreshDatabase::class);
 
-function raffleAdminHost(): string
-{
-    return (string) parse_url((string) config('app.admin_url'), PHP_URL_HOST);
-}
-
-function raffleAdminUrl(string $path = '/'): string
-{
-    return rtrim((string) config('app.admin_url'), '/').$path;
-}
-
 function raffleDateTime(?CarbonImmutable $value): string
 {
     return $value?->format('Y-m-d H:i') ?? 'Sin definir';
@@ -32,8 +22,8 @@ function raffleIndexResponse(?Admin $admin = null, array $server = []): TestResp
     }
 
     return $request
-        ->withServerVariables(array_merge(['HTTP_HOST' => raffleAdminHost()], $server))
-        ->get(raffleAdminUrl('/raffles'));
+        ->withServerVariables(array_merge(['HTTP_HOST' => adminRaffleHost()], $server))
+        ->get(adminRaffleUrl('/raffles'));
 }
 
 function persistedRaffleForIndex(string $status, ?CarbonImmutable $startsAt, ?CarbonImmutable $endsAt, CarbonImmutable $createdAt): Raffle
@@ -76,6 +66,34 @@ it('shows the raffle index page to authenticated admins', function () {
         ->assertSeeText('Crear sorteo')
         ->assertSee(route('admin.raffles.edit', $raffle), escape: false)
         ->assertSeeText('Editar');
+});
+
+it('shows a registrations entry point for every persisted raffle row', function () {
+    $admin = Admin::factory()->create();
+    $firstRaffle = Raffle::factory()->create();
+    $secondRaffle = Raffle::factory()->create();
+
+    raffleIndexResponse($admin)
+        ->assertOk()
+        ->assertSee(route('admin.raffles.registrations.index', $firstRaffle), escape: false)
+        ->assertSee(route('admin.raffles.registrations.index', $secondRaffle), escape: false)
+        ->assertSeeText('Inscripciones');
+});
+
+it('shows persisted registration counts for zero and non-zero raffle rows', function () {
+    $admin = Admin::factory()->create();
+    $raffleWithoutRegistrations = Raffle::factory()->create();
+    $raffleWithRegistrations = Raffle::factory()->create();
+
+    persistedRaffleRegistration($raffleWithRegistrations, ['email' => 'first@example.com']);
+    persistedRaffleRegistration($raffleWithRegistrations, ['email' => 'second@example.com']);
+
+    raffleIndexResponse($admin)
+        ->assertOk()
+        ->assertSee(route('admin.raffles.registrations.index', $raffleWithoutRegistrations), escape: false)
+        ->assertSee(route('admin.raffles.registrations.index', $raffleWithRegistrations), escape: false)
+        ->assertSeeText('0 inscripciones')
+        ->assertSeeText('2 inscripciones');
 });
 
 it('shows an explicit empty state when no raffles exist', function () {
@@ -142,8 +160,8 @@ it('shows a scoped create success flash after a successful create redirect', fun
             'admin.raffles.create_success' => 'El sorteo se creó en borrador.',
         ])
         ->actingAs($admin, 'admin')
-        ->withServerVariables(['HTTP_HOST' => raffleAdminHost()])
-        ->get(raffleAdminUrl('/raffles'))
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(adminRaffleUrl('/raffles'))
         ->assertOk()
         ->assertSeeText('El sorteo se creó en borrador.');
 });
@@ -156,8 +174,8 @@ it('shows a scoped update success flash after a successful update redirect', fun
             'admin.raffles.update_success' => 'El sorteo se actualizó.',
         ])
         ->actingAs($admin, 'admin')
-        ->withServerVariables(['HTTP_HOST' => raffleAdminHost()])
-        ->get(raffleAdminUrl('/raffles'))
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(adminRaffleUrl('/raffles'))
         ->assertOk()
         ->assertSeeText('El sorteo se actualizó.')
         ->assertDontSeeText('El sorteo se creó en borrador.');
@@ -194,8 +212,8 @@ it('shows a scoped participation open success flash after a matching redirect', 
             'admin.raffles.participation_open_success' => 'La participación del sorteo se abrió.',
         ])
         ->actingAs($admin, 'admin')
-        ->withServerVariables(['HTTP_HOST' => raffleAdminHost()])
-        ->get(raffleAdminUrl('/raffles'))
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(adminRaffleUrl('/raffles'))
         ->assertOk()
         ->assertSeeText('La participación del sorteo se abrió.')
         ->assertDontSeeText('La participación del sorteo se cerró.');
@@ -209,8 +227,8 @@ it('shows a scoped participation close success flash after a matching redirect',
             'admin.raffles.participation_close_success' => 'La participación del sorteo se cerró.',
         ])
         ->actingAs($admin, 'admin')
-        ->withServerVariables(['HTTP_HOST' => raffleAdminHost()])
-        ->get(raffleAdminUrl('/raffles'))
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(adminRaffleUrl('/raffles'))
         ->assertOk()
         ->assertSeeText('La participación del sorteo se cerró.')
         ->assertDontSeeText('La participación del sorteo se abrió.');
@@ -221,9 +239,9 @@ it('shows the controller-reported participation error flashed by invalid transit
     $raffle = Raffle::factory()->create();
 
     $this->actingAs($admin, 'admin')
-        ->withServerVariables(['HTTP_HOST' => raffleAdminHost()])
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
         ->from(route('admin.raffles.index'))
-        ->post(raffleAdminUrl("/raffles/{$raffle->id}/participation/open"))
+        ->post(adminRaffleUrl("/raffles/{$raffle->id}/participation/open"))
         ->assertRedirect(route('admin.raffles.index'));
 
     raffleIndexResponse($admin)

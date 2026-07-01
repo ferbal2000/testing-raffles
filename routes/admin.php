@@ -31,17 +31,17 @@ if (is_string($adminHost) && $adminHost !== '') {
             Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('admin.login.store');
         });
 
-         Route::middleware('auth:admin')->group(function (): void {
-             Route::view('/', 'admin.home')->name('admin.home');
-             Route::get('/raffles', [RaffleController::class, 'index'])->name('admin.raffles.index');
-             Route::get('/raffles/create', [RaffleController::class, 'create'])->name('admin.raffles.create');
-             Route::get('/raffles/{raffle}/edit', [RaffleController::class, 'edit'])->name('admin.raffles.edit');
+        Route::middleware('auth:admin')->group(function (): void {
+            Route::view('/', 'admin.home')->name('admin.home');
+            Route::get('/raffles', [RaffleController::class, 'index'])->name('admin.raffles.index');
+            Route::get('/raffles/create', [RaffleController::class, 'create'])->name('admin.raffles.create');
+            Route::get('/raffles/{raffle}/edit', [RaffleController::class, 'edit'])->name('admin.raffles.edit');
             Route::get('/raffles/{raffle}/registrations', [RaffleController::class, 'registrations'])->name('admin.raffles.registrations.index');
-             Route::post('/raffles', [RaffleController::class, 'store'])->name('admin.raffles.store');
-             Route::patch('/raffles/{raffle}', [RaffleController::class, 'update'])->name('admin.raffles.update');
-             Route::post('/raffles/{raffle}/participation/open', [RaffleController::class, 'openParticipation'])->name('admin.raffles.participation.open');
-             Route::post('/raffles/{raffle}/participation/close', [RaffleController::class, 'closeParticipation'])->name('admin.raffles.participation.close');
-             Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
+            Route::post('/raffles', [RaffleController::class, 'store'])->name('admin.raffles.store');
+            Route::patch('/raffles/{raffle}', [RaffleController::class, 'update'])->name('admin.raffles.update');
+            Route::post('/raffles/{raffle}/participation/open', [RaffleController::class, 'openParticipation'])->name('admin.raffles.participation.open');
+            Route::post('/raffles/{raffle}/participation/close', [RaffleController::class, 'closeParticipation'])->name('admin.raffles.participation.close');
+            Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
         });
 
         Route::get('/_test/auth/admin/login/{admin}', function (Request $request, Admin $admin) use ($adminBoundaryProbePayload): JsonResponse {
@@ -64,16 +64,16 @@ if (is_string($adminHost) && $adminHost !== '') {
         Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('admin.login.store');
     });
 
-     Route::middleware('auth:admin')->group(function (): void {
-         Route::view('/', 'admin.home')->name('admin.home');
-         Route::get('/raffles', [RaffleController::class, 'index'])->name('admin.raffles.index');
-         Route::get('/raffles/create', [RaffleController::class, 'create'])->name('admin.raffles.create');
-         Route::get('/raffles/{raffle}/edit', [RaffleController::class, 'edit'])->name('admin.raffles.edit');
+    Route::middleware('auth:admin')->group(function (): void {
+        Route::view('/', 'admin.home')->name('admin.home');
+        Route::get('/raffles', [RaffleController::class, 'index'])->name('admin.raffles.index');
+        Route::get('/raffles/create', [RaffleController::class, 'create'])->name('admin.raffles.create');
+        Route::get('/raffles/{raffle}/edit', [RaffleController::class, 'edit'])->name('admin.raffles.edit');
         Route::get('/raffles/{raffle}/registrations', [RaffleController::class, 'registrations'])->name('admin.raffles.registrations.index');
-         Route::post('/raffles', [RaffleController::class, 'store'])->name('admin.raffles.store');
-         Route::patch('/raffles/{raffle}', [RaffleController::class, 'update'])->name('admin.raffles.update');
-         Route::post('/raffles/{raffle}/participation/open', [RaffleController::class, 'openParticipation'])->name('admin.raffles.participation.open');
-         Route::post('/raffles/{raffle}/participation/close', [RaffleController::class, 'closeParticipation'])->name('admin.raffles.participation.close');
-         Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
+        Route::post('/raffles', [RaffleController::class, 'store'])->name('admin.raffles.store');
+        Route::patch('/raffles/{raffle}', [RaffleController::class, 'update'])->name('admin.raffles.update');
+        Route::post('/raffles/{raffle}/participation/open', [RaffleController::class, 'openParticipation'])->name('admin.raffles.participation.open');
+        Route::post('/raffles/{raffle}/participation/close', [RaffleController::class, 'closeParticipation'])->name('admin.raffles.participation.close');
+        Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
     });
 }
