@@ -51,14 +51,14 @@ it('accepts an eligible guest submission and stores a normalized registration', 
         ->openedForParticipation(CarbonImmutable::parse('2026-07-01 09:00:00'))
         ->create();
 
-    $response = $this->withServerVariables(['HTTP_HOST' => publicParticipationHost()])
+    $this->followingRedirects()
+        ->withServerVariables(['HTTP_HOST' => publicParticipationHost()])
         ->post(publicParticipationUrl("/raffles/{$raffle->id}/participation"), [
             'name' => 'Ada Lovelace',
             'email' => '  ADA@Example.COM ',
-        ]);
-
-    $response->assertRedirect(route('public.raffles.show', $raffle))
-        ->assertSessionHas('public.raffles.participation_success');
+        ])
+        ->assertOk()
+        ->assertSeeText('Tu participación quedó registrada.');
 
     assertDatabaseHas(RaffleRegistration::class, [
         'raffle_id' => $raffle->id,
@@ -68,6 +68,7 @@ it('accepts an eligible guest submission and stores a normalized registration', 
     ]);
 
     assertDatabaseCount(RaffleRegistration::class, 1);
+
 });
 
 it('does not create another registration for a duplicate normalized email', function () {
@@ -81,14 +82,14 @@ it('does not create another registration for a duplicate normalized email', func
         'email' => '  ADA@Example.COM ',
     ]);
 
-    $response = $this->withServerVariables(['HTTP_HOST' => publicParticipationHost()])
+    $this->followingRedirects()
+        ->withServerVariables(['HTTP_HOST' => publicParticipationHost()])
         ->post(publicParticipationUrl("/raffles/{$raffle->id}/participation"), [
             'name' => 'Another Name',
             'email' => ' ADA@EXAMPLE.COM ',
-        ]);
-
-    $response->assertRedirect(route('public.raffles.show', $raffle))
-        ->assertSessionHas('public.raffles.participation_duplicate');
+        ])
+        ->assertOk()
+        ->assertSeeText('Ese correo ya estaba registrado para este sorteo.');
 
     assertDatabaseCount(RaffleRegistration::class, 1);
 
@@ -97,6 +98,7 @@ it('does not create another registration for a duplicate normalized email', func
         'name' => 'Existing Guest',
         'email' => 'ada@example.com',
     ]);
+
 });
 
 it('rejects submissions for a raffle that is already closed for participation', function () {
@@ -108,16 +110,19 @@ it('rejects submissions for a raffle that is already closed for participation', 
         )
         ->create();
 
-    $response = $this->withServerVariables(['HTTP_HOST' => publicParticipationHost()])
+    $this->followingRedirects()
+        ->withServerVariables(['HTTP_HOST' => publicParticipationHost()])
         ->post(publicParticipationUrl("/raffles/{$raffle->id}/participation"), [
             'name' => 'Ada Lovelace',
             'email' => 'ada@example.com',
-        ]);
-
-    $response->assertRedirect(route('public.raffles.show', $raffle))
-        ->assertSessionHas('public.raffles.participation_unavailable');
+        ])
+        ->assertOk()
+        ->assertSeeText('La participación no está disponible en este momento.')
+        ->assertSeeText('La inscripción está cerrada por ahora.')
+        ->assertDontSee('name="name"', false);
 
     assertDatabaseCount(RaffleRegistration::class, 0);
+
 });
 
 it('revalidates eligibility server-side for stale pages before storing a registration', function () {
@@ -207,22 +212,47 @@ it('returns unavailable before validation for stale submits to raffles that beca
     assertDatabaseCount(RaffleRegistration::class, 0);
 });
 
+it('shows unavailable feedback on the public catalog when a stale submit targets a raffle that became hidden', function () {
+    $raffle = Raffle::factory()
+        ->published()
+        ->openedForParticipation(CarbonImmutable::parse('2026-07-01 09:00:00'))
+        ->create();
+
+    $this->withServerVariables(['HTTP_HOST' => publicParticipationHost()])
+        ->get(publicParticipationUrl("/raffles/{$raffle->id}"))
+        ->assertOk();
+
+    $raffle->close();
+
+    $this->followingRedirects()
+        ->withServerVariables(['HTTP_HOST' => publicParticipationHost()])
+        ->post(publicParticipationUrl("/raffles/{$raffle->id}/participation"), [
+            'name' => 'Ada Lovelace',
+            'email' => 'ada@example.com',
+        ])
+        ->assertOk()
+        ->assertSeeText('Catálogo público')
+        ->assertSeeText('La participación no está disponible en este momento.');
+
+    assertDatabaseCount(RaffleRegistration::class, 0);
+});
+
 it('rejects invalid guest submission data without storing a registration', function () {
     $raffle = Raffle::factory()
         ->published()
         ->openedForParticipation(CarbonImmutable::parse('2026-07-01 09:00:00'))
         ->create();
 
-    $response = $this->from(publicParticipationUrl("/raffles/{$raffle->id}"))
+    $this->from(publicParticipationUrl("/raffles/{$raffle->id}"))
+        ->followingRedirects()
         ->withServerVariables(['HTTP_HOST' => publicParticipationHost()])
         ->post(publicParticipationUrl("/raffles/{$raffle->id}/participation"), [
             'name' => '',
             'email' => 'invalid-email',
-        ]);
-
-    $response->assertRedirect(publicParticipationUrl("/raffles/{$raffle->id}"))
-        ->assertSessionHasErrors(['name', 'email'])
-        ->assertSessionHasInput('email', 'invalid-email');
+        ])
+        ->assertOk()
+        ->assertSeeText('Revisá los datos del formulario e intentá de nuevo.')
+        ->assertSee('value="invalid-email"', false);
 
     assertDatabaseCount(RaffleRegistration::class, 0);
 });

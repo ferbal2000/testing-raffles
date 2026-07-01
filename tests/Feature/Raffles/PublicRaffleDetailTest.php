@@ -42,7 +42,7 @@ it('shows the public raffle detail page for published raffles only', function ()
         ->assertNotFound();
 });
 
-it('shows read-only availability messaging without registration or ticket actions', function () {
+it('shows the guest participation form only while participation is open', function () {
     $openRaffle = Raffle::factory()
         ->published()
         ->openedForParticipation(CarbonImmutable::parse('2026-07-01 09:00:00'))
@@ -60,15 +60,25 @@ it('shows read-only availability messaging without registration or ticket action
         ->get(publicRaffleUrl("/raffles/{$openRaffle->id}"))
         ->assertOk()
         ->assertSeeText('Participación disponible')
-        ->assertDontSeeText('Registrate')
+        ->assertSeeText('Completá tus datos para participar')
+        ->assertSeeText('Nombre')
+        ->assertSeeText('Correo electrónico')
+        ->assertSeeText('Quiero participar')
+        ->assertSee('name="name"', false)
+        ->assertSee('name="email"', false)
         ->assertDontSeeText('Comprar ticket')
+        ->assertDontSeeText('Ticket')
+        ->assertDontSeeText('Número')
         ->assertDontSeeText((string) $openRaffle->id);
 
     $this->withServerVariables(['HTTP_HOST' => publicRaffleHost()])
         ->get(publicRaffleUrl("/raffles/{$closedParticipationRaffle->id}"))
         ->assertOk()
         ->assertSeeText('Participación no disponible')
-        ->assertDontSeeText('Registrate')
+        ->assertSeeText('La inscripción está cerrada por ahora.')
+        ->assertDontSee('name="name"', false)
+        ->assertDontSee('name="email"', false)
+        ->assertDontSeeText('Quiero participar')
         ->assertDontSeeText('Comprar ticket');
 });
 

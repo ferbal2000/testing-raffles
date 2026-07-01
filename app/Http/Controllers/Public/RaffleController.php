@@ -44,7 +44,7 @@ final class RaffleController extends Controller
         $resolvedRaffle = $this->resolveParticipationRaffle($raffle, $allowsStaleUnavailableResponse);
 
         if ($resolvedRaffle === null) {
-            throw (new ModelNotFoundException())->setModel(Raffle::class, [$raffle]);
+            throw (new ModelNotFoundException)->setModel(Raffle::class, [$raffle]);
         }
 
         if ($this->shouldReturnUnavailableBeforeValidation($resolvedRaffle, $allowsStaleUnavailableResponse)) {
