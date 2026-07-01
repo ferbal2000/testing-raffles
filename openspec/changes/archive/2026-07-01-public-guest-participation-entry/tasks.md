@@ -26,7 +26,7 @@ Chain strategy: stacked-to-main
 ## Phase 1: Foundation RED
 
 - [x] 1.1 Create `tests/Feature/Raffles/PublicRaffleParticipationEntryTest.php` for accepted entry, normalized-email duplicate, closed rejection, stale-page rejection, and validation errors.
-- [ ] 1.2 Update `tests/Feature/Raffles/PublicRaffleDetailTest.php` to fail for open-form visibility, closed no-form state, and no ticket/number language.
+- [x] 1.2 Update `tests/Feature/Raffles/PublicRaffleDetailTest.php` to fail for open-form visibility, closed no-form state, and no ticket/number language.
 
 ## Phase 2: Foundation GREEN
 
@@ -42,11 +42,11 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: Public UI GREEN
 
-- [ ] 4.1 Update `resources/views/public/raffles/show.blade.php` to render the guest form, validation feedback, and success/info flashes only when participation is open.
-- [ ] 4.2 Update `lang/es/public-raffles.php` with form labels, CTA, duplicate confirmation, unavailable submission, and validation-adjacent public copy without ticket wording.
-- [ ] 4.3 REFACTOR view copy/layout so closed raffles show friendly unavailable messaging and open raffles preserve current metadata blocks.
+- [x] 4.1 Update `resources/views/public/raffles/show.blade.php` to render the guest form, validation feedback, and success/info flashes only when participation is open.
+- [x] 4.2 Update `lang/es/public-raffles.php` with form labels, CTA, duplicate confirmation, unavailable submission, and validation-adjacent public copy without ticket wording.
+- [x] 4.3 REFACTOR view copy/layout so closed raffles show friendly unavailable messaging and open raffles preserve current metadata blocks.
 
 ## Phase 5: Spec Compliance REFACTOR
 
-- [ ] 5.1 Review `tests/Feature/Raffles/PublicRaffleParticipationEntryTest.php` and `tests/Feature/Raffles/PublicRaffleDetailTest.php` against all change-spec scenarios before implementation handoff.
+- [x] 5.1 Review `tests/Feature/Raffles/PublicRaffleParticipationEntryTest.php` and `tests/Feature/Raffles/PublicRaffleDetailTest.php` against all change-spec scenarios before implementation handoff.
 - [x] 5.2 Update `openspec/changes/public-guest-participation-entry/tasks.md` execution checkboxes during apply; keep `bin/test` as the later verification command, not part of planning.

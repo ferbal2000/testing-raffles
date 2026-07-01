@@ -7,6 +7,12 @@
             <p class="text-sm text-slate-500">{{ __('home.public.ordering_note') }}</p>
         </div>
 
+        @if (session('public.raffles.participation_unavailable'))
+            <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="status">
+                {{ __('public-raffles.participation.unavailable') }}
+            </div>
+        @endif
+
         @forelse ($raffles as $raffle)
             <article class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
                 <div class="space-y-1">
