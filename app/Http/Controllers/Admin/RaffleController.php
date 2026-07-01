@@ -16,7 +16,10 @@ final class RaffleController extends Controller
     public function index(): View
     {
         return view('admin.raffles.index', [
-            'raffles' => Raffle::query()->latest('id')->get(),
+            'raffles' => Raffle::query()
+                ->withCount('registrations')
+                ->latest('id')
+                ->get(),
         ]);
     }
 
@@ -35,7 +38,9 @@ final class RaffleController extends Controller
     public function registrations(Raffle $raffle): View
     {
         $raffle->load([
-            'registrations' => fn ($query) => $query->latest('id'),
+            'registrations' => fn ($query) => $query
+                ->select(['id', 'raffle_id', 'user_id', 'name', 'email', 'created_at'])
+                ->latest('id'),
         ]);
 
         return view('admin.raffles.registrations', [

@@ -79,6 +79,17 @@
                                             {{ __('admin-raffles.index.actions.edit') }}
                                         </a>
 
+                                        <a
+                                            href="{{ route('admin.raffles.registrations.index', $raffle) }}"
+                                            class="inline-flex items-center justify-center rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-100"
+                                        >
+                                            {{ __('admin-raffles.index.actions.registrations') }}
+                                        </a>
+
+                                        <span class="text-xs text-slate-500">
+                                            {{ trans_choice('admin-raffles.index.registration_count', $raffle->registrations_count, ['count' => $raffle->registrations_count]) }}
+                                        </span>
+
                                         @if ($raffle->canOpenParticipation())
                                             <form method="POST" action="{{ route('admin.raffles.participation.open', $raffle) }}">
                                                 @csrf
