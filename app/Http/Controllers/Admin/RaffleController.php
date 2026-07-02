@@ -97,6 +97,21 @@ final class RaffleController extends Controller
             ->with('admin.raffles.participation_open_success', trans('admin-raffles.index.flash.participation_open_success'));
     }
 
+    public function publish(Raffle $raffle): RedirectResponse
+    {
+        try {
+            $raffle->publish();
+        } catch (InvalidRaffleTransition $exception) {
+            return redirect()
+                ->route('admin.raffles.index')
+                ->withErrors(['publish' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('admin.raffles.index')
+            ->with('admin.raffles.publish_success', trans('admin-raffles.index.flash.publish_success'));
+    }
+
     public function closeParticipation(Request $request, Raffle $raffle): RedirectResponse
     {
         try {

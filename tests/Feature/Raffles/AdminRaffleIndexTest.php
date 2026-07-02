@@ -204,6 +204,59 @@ it('shows participation actions only for eligible raffle rows', function () {
         ->assertDontSee(route('admin.raffles.participation.close', $participationClosedRaffle), escape: false);
 });
 
+it('shows a confirmed publish action only for draft raffle rows', function () {
+    $admin = Admin::factory()->create();
+    $draftRaffle = Raffle::factory()->create();
+    $publishedRaffle = Raffle::factory()->published()->create();
+    $closedRaffle = Raffle::factory()->closed()->create();
+
+    raffleIndexResponse($admin)
+        ->assertOk()
+        ->assertSee(route('admin.raffles.publish', $draftRaffle), escape: false)
+        ->assertSeeText('Publicar')
+        ->assertSee('¿Publicar este sorteo?', escape: false)
+        ->assertDontSee(route('admin.raffles.publish', $publishedRaffle), escape: false)
+        ->assertDontSee(route('admin.raffles.publish', $closedRaffle), escape: false);
+});
+
+it('shows a scoped publish success flash after a matching redirect', function () {
+    $admin = Admin::factory()->create();
+
+    test()
+        ->withSession([
+            'admin.raffles.publish_success' => 'El sorteo se publicó.',
+        ])
+        ->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(adminRaffleUrl('/raffles'))
+        ->assertOk()
+        ->assertSeeText('El sorteo se publicó.')
+        ->assertDontSeeText('El sorteo se creó en borrador.')
+        ->assertDontSeeText('El sorteo se actualizó.')
+        ->assertDontSeeText('La participación del sorteo se abrió.')
+        ->assertDontSeeText('La participación del sorteo se cerró.');
+});
+
+it('shows the controller-reported publish error without success flashes', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->published()->create();
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->from(route('admin.raffles.index'))
+        ->post(adminRaffleUrl("/raffles/{$raffle->id}/publish"))
+        ->assertRedirect(route('admin.raffles.index'));
+
+    raffleIndexResponse($admin)
+        ->assertOk()
+        ->assertSeeText('Cannot transition raffle from [published] to [published].')
+        ->assertDontSeeText('El sorteo se publicó.')
+        ->assertDontSeeText('El sorteo se creó en borrador.')
+        ->assertDontSeeText('El sorteo se actualizó.')
+        ->assertDontSeeText('La participación del sorteo se abrió.')
+        ->assertDontSeeText('La participación del sorteo se cerró.');
+});
+
 it('shows a scoped participation open success flash after a matching redirect', function () {
     $admin = Admin::factory()->create();
 
@@ -256,6 +309,7 @@ it('does not show create or update success flashes without scoped session keys',
         ->assertOk()
         ->assertDontSeeText('El sorteo se creó en borrador.')
         ->assertDontSeeText('El sorteo se actualizó.')
+        ->assertDontSeeText('El sorteo se publicó.')
         ->assertDontSeeText('La participación del sorteo se abrió.')
         ->assertDontSeeText('La participación del sorteo se cerró.');
 });

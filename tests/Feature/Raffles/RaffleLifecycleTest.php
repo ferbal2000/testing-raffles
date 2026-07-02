@@ -64,6 +64,16 @@ it('publishes a persisted draft raffle', function () {
     expect($raffle->fresh()->status)->toBe(RaffleStatus::Published);
 });
 
+it('allows publication checks only for draft raffles', function () {
+    $draftRaffle = Raffle::factory()->create();
+    $publishedRaffle = Raffle::factory()->published()->create();
+    $closedRaffle = Raffle::factory()->closed()->create();
+
+    expect($draftRaffle->canPublish())->toBeTrue()
+        ->and($publishedRaffle->canPublish())->toBeFalse()
+        ->and($closedRaffle->canPublish())->toBeFalse();
+});
+
 it('does not publish a raffle from any state other than draft', function () {
     $raffle = Raffle::factory()->closed()->create();
 

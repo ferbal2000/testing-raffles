@@ -66,11 +66,16 @@ class Raffle extends Model
     {
         $this->ensureIsPersisted();
 
-        if ($this->status !== RaffleStatus::Draft) {
+        if (! $this->canPublish()) {
             throw InvalidRaffleTransition::from($this->status->value, RaffleStatus::Published->value);
         }
 
         $this->forceFill(['status' => RaffleStatus::Published])->save();
+    }
+
+    public function canPublish(): bool
+    {
+        return $this->status === RaffleStatus::Draft;
     }
 
     public function close(): void
