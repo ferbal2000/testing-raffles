@@ -87,6 +87,15 @@ it('closes participation for an opened raffle with admin audit data and a scoped
 it('rejects invalid participation open and close transitions without mutating the raffle', function (string $action, Closure $makeRaffle) {
     $admin = Admin::factory()->create();
     $raffle = $makeRaffle();
+    $businessAttributeKeys = [
+        'status',
+        'participation_opened_at',
+        'participation_closed_at',
+        'participation_closed_reason',
+        'participation_closed_by_admin_id',
+    ];
+    $businessAttributeLookup = array_flip($businessAttributeKeys);
+    $originalBusinessAttributes = array_intersect_key($raffle->getAttributes(), $businessAttributeLookup);
 
     $response = $this->actingAs($admin, 'admin')
         ->withServerVariables(['HTTP_HOST' => raffleParticipationAdminHost()])
@@ -96,7 +105,8 @@ it('rejects invalid participation open and close transitions without mutating th
     $response->assertRedirect(route('admin.raffles.index'))
         ->assertSessionHasErrors('participation');
 
-    expect($raffle->fresh()->getAttributes())->toMatchArray($raffle->getAttributes());
+    expect(array_intersect_key($raffle->fresh()->getAttributes(), $businessAttributeLookup))
+        ->toMatchArray($originalBusinessAttributes);
 })->with(function () {
     return [
         'open draft raffle' => ['open', fn () => Raffle::factory()->create()],

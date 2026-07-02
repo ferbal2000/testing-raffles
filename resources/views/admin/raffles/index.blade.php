@@ -26,6 +26,12 @@
             </div>
         @endif
 
+        @if (session('admin.raffles.publish_success'))
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {{ session('admin.raffles.publish_success') }}
+            </div>
+        @endif
+
         @if (session('admin.raffles.participation_open_success'))
             <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                 {{ session('admin.raffles.participation_open_success') }}
@@ -41,6 +47,12 @@
         @if ($errors->has('participation'))
             <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
                 {{ $errors->first('participation') }}
+            </div>
+        @endif
+
+        @if ($errors->has('publish'))
+            <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                {{ $errors->first('publish') }}
             </div>
         @endif
 
@@ -89,6 +101,19 @@
                                         <span class="text-xs text-slate-500">
                                             {{ trans_choice('admin-raffles.index.registration_count', $raffle->registrations_count, ['count' => $raffle->registrations_count]) }}
                                         </span>
+
+                                        @if ($raffle->canPublish())
+                                            <form method="POST" action="{{ route('admin.raffles.publish', $raffle) }}" onsubmit="return confirm(@js(__('admin-raffles.index.actions.publish_confirm')))">
+                                                @csrf
+
+                                                <button
+                                                    type="submit"
+                                                    class="inline-flex items-center justify-center rounded-lg border border-sky-300 px-3 py-1.5 font-medium text-sky-700 transition hover:bg-sky-50"
+                                                >
+                                                    {{ __('admin-raffles.index.actions.publish') }}
+                                                </button>
+                                            </form>
+                                        @endif
 
                                         @if ($raffle->canOpenParticipation())
                                             <form method="POST" action="{{ route('admin.raffles.participation.open', $raffle) }}">
