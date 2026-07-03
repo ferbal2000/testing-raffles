@@ -1,9 +1,11 @@
 <?php
 
+use App\Enums\RaffleRegistrationStatus;
 use App\Models\Raffle;
 use App\Models\RaffleRegistration;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 
 use function Pest\Laravel\assertDatabaseCount;
 use function Pest\Laravel\assertDatabaseHas;
@@ -18,6 +20,32 @@ function publicParticipationHost(): string
 function publicParticipationUrl(string $path = ''): string
 {
     return rtrim((string) config('app.public_url'), '/').$path;
+}
+
+function assertExplicitRegistrationStatusPersists(RaffleRegistrationStatus $status): void
+{
+    $raffle = Raffle::factory()
+        ->published()
+        ->openedForParticipation(CarbonImmutable::parse('2026-07-01 09:00:00'))
+        ->create();
+
+    $registration = RaffleRegistration::query()->create([
+        'raffle_id' => $raffle->id,
+        'user_id' => null,
+        'name' => 'Ada Lovelace',
+        'email' => 'ada@example.com',
+        'status' => $status,
+    ]);
+
+    $freshRegistration = $registration->fresh();
+
+    expect($freshRegistration->status)->toBe($status);
+
+    assertDatabaseHas(RaffleRegistration::class, [
+        'raffle_id' => $raffle->id,
+        'email' => 'ada@example.com',
+        'status' => $status->value,
+    ]);
 }
 
 beforeEach(function () {
@@ -45,6 +73,57 @@ it('normalizes emails when registrations are created directly through the model 
     ]);
 });
 
+it('persists an explicit flagged registration status through the model boundary', function () {
+    assertExplicitRegistrationStatusPersists(RaffleRegistrationStatus::Flagged);
+});
+
+it('persists an explicit cancelled registration status through the model boundary', function () {
+    assertExplicitRegistrationStatusPersists(RaffleRegistrationStatus::Cancelled);
+});
+
+it('rejects unsupported registration statuses before storing them', function () {
+    $raffle = Raffle::factory()
+        ->published()
+        ->openedForParticipation(CarbonImmutable::parse('2026-07-01 09:00:00'))
+        ->create();
+
+    expect(fn () => RaffleRegistration::query()->create([
+        'raffle_id' => $raffle->id,
+        'user_id' => null,
+        'name' => 'Ada Lovelace',
+        'email' => 'ada@example.com',
+        'status' => 'pending',
+    ]))->toThrow(ValueError::class);
+
+    assertDatabaseCount(RaffleRegistration::class, 0);
+});
+
+it('treats registrations without an explicit status as active at the storage boundary', function () {
+    $raffle = Raffle::factory()
+        ->published()
+        ->openedForParticipation(CarbonImmutable::parse('2026-07-01 09:00:00'))
+        ->create();
+
+    $registrationId = DB::table('raffle_registrations')->insertGetId([
+        'raffle_id' => $raffle->id,
+        'user_id' => null,
+        'name' => 'Existing Guest',
+        'email' => 'existing@example.com',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $registration = RaffleRegistration::query()->findOrFail($registrationId);
+
+    expect($registration->status)->toBe(RaffleRegistrationStatus::Active);
+
+    assertDatabaseHas(RaffleRegistration::class, [
+        'raffle_id' => $raffle->id,
+        'email' => 'existing@example.com',
+        'status' => RaffleRegistrationStatus::Active->value,
+    ]);
+});
+
 it('accepts an eligible guest submission and stores a normalized registration', function () {
     $raffle = Raffle::factory()
         ->published()
@@ -65,7 +144,10 @@ it('accepts an eligible guest submission and stores a normalized registration', 
         'user_id' => null,
         'name' => 'Ada Lovelace',
         'email' => 'ada@example.com',
+        'status' => RaffleRegistrationStatus::Active->value,
     ]);
+
+    expect(RaffleRegistration::query()->firstOrFail()->status)->toBe(RaffleRegistrationStatus::Active);
 
     assertDatabaseCount(RaffleRegistration::class, 1);
 
