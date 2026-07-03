@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\RaffleRegistrationStatus;
 use App\Models\Raffle;
 use App\Models\RaffleRegistration;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -24,6 +25,7 @@ class RaffleRegistrationFactory extends Factory
             'user_id' => null,
             'name' => fake()->name(),
             'email' => Str::lower(fake()->safeEmail()),
+            'status' => RaffleRegistrationStatus::Active,
         ];
     }
 }
