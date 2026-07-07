@@ -126,7 +126,7 @@ The system MUST provide a minimal create entry point from the admin raffle index
 
 ### Requirement: Admin raffle index provides registration list entry points
 
-The system MUST provide a per-row entry point from the admin raffle index to `GET /raffles/{raffle}/registrations` for each persisted raffle shown on the index. The entry point MUST remain read-only and MUST NOT expose registration management, export, or status controls. The index MAY show a simple registration count, but when shown it MUST reflect persisted registrations for that raffle only.
+The system MUST provide a per-row entry point from the admin raffle index to `GET /raffles/{raffle}/registrations` for each persisted raffle shown on the index. The entry point MUST remain read-only and MUST NOT expose registration management, export, or status controls. The existing simple registration count surface MUST remain available on the index and MUST reflect persisted registrations for that raffle only.
 
 #### Scenario: Admin uses a registrations entry point from the index
 

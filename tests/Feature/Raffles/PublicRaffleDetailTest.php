@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Raffle;
+use App\Models\RaffleRegistration;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -80,6 +81,59 @@ it('shows the guest participation form only while participation is open', functi
         ->assertDontSee('name="email"', false)
         ->assertDontSeeText('Quiero participar')
         ->assertDontSeeText('Comprar ticket');
+});
+
+it('shows friendly registration count copy only while participation is open', function () {
+    $openRaffleWithRegistrations = Raffle::factory()
+        ->published()
+        ->openedForParticipation(CarbonImmutable::parse('2026-07-01 09:00:00'))
+        ->create();
+
+    RaffleRegistration::factory()->count(2)->create([
+        'raffle_id' => $openRaffleWithRegistrations->id,
+    ]);
+
+    $openRaffleWithoutRegistrations = Raffle::factory()
+        ->published()
+        ->openedForParticipation(CarbonImmutable::parse('2026-07-01 09:00:00'))
+        ->create();
+
+    $closedParticipationRaffle = Raffle::factory()
+        ->published()
+        ->participationClosed(
+            CarbonImmutable::parse('2026-07-01 09:00:00'),
+            CarbonImmutable::parse('2026-07-03 21:00:00'),
+        )
+        ->create();
+
+    RaffleRegistration::factory()->create([
+        'raffle_id' => $closedParticipationRaffle->id,
+    ]);
+
+    $this->withServerVariables(['HTTP_HOST' => publicRaffleHost()])
+        ->get(publicRaffleUrl("/raffles/{$openRaffleWithRegistrations->id}"))
+        ->assertOk()
+        ->assertSeeText('2 personas ya están registradas en este sorteo.')
+        ->assertDontSeeText('capacidad')
+        ->assertDontSeeText('probabilidad')
+        ->assertDontSeeText('ticket')
+        ->assertDontSeeText('beneficio');
+
+    $this->withServerVariables(['HTTP_HOST' => publicRaffleHost()])
+        ->get(publicRaffleUrl("/raffles/{$openRaffleWithoutRegistrations->id}"))
+        ->assertOk()
+        ->assertSeeText('Todavía no hay personas registradas en este sorteo.')
+        ->assertDontSeeText('capacidad')
+        ->assertDontSeeText('probabilidad')
+        ->assertDontSeeText('ticket')
+        ->assertDontSeeText('beneficio');
+
+    $this->withServerVariables(['HTTP_HOST' => publicRaffleHost()])
+        ->get(publicRaffleUrl("/raffles/{$closedParticipationRaffle->id}"))
+        ->assertOk()
+        ->assertDontSeeText('1 persona ya está registrada en este sorteo.')
+        ->assertDontSeeText('personas ya están registradas en este sorteo')
+        ->assertDontSeeText('Todavía no hay personas registradas en este sorteo.');
 });
 
 it('treats starts and ends dates as informational metadata only', function () {

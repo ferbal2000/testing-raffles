@@ -56,6 +56,9 @@
                 <div class="space-y-1">
                     <h2 class="text-xl font-semibold text-slate-950">{{ __('public-raffles.participation.title') }}</h2>
                     <p class="text-sm text-slate-600">{{ __('public-raffles.participation.description') }}</p>
+                    <p class="text-sm font-medium text-slate-700">
+                        {{ trans_choice('public-raffles.participation.registration_count', $raffle->registrations_count, ['count' => $raffle->registrations_count]) }}
+                    </p>
                 </div>
 
                 <form method="POST" action="{{ route('public.raffles.participation.store', $raffle) }}" class="grid gap-4 sm:grid-cols-2">

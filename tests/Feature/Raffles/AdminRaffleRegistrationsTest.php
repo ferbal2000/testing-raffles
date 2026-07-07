@@ -43,6 +43,25 @@ it('shows an explicit empty state for authenticated admins when a raffle has no 
         ->assertDontSeeText('Cerrar participación');
 });
 
+it('shows a read-only zero-registration summary while preserving the empty state', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(adminRaffleUrl("/raffles/{$raffle->id}/registrations"))
+        ->assertOk()
+        ->assertSeeText('Resumen de inscripciones')
+        ->assertSeeText('0 inscripciones registradas para este sorteo.')
+        ->assertSeeText('Todavía no hay inscripciones para este sorteo.')
+        ->assertDontSeeText('Ticket')
+        ->assertDontSeeText('Capacidad')
+        ->assertDontSeeText('Pago')
+        ->assertDontSeeText('Sorteo garantizado')
+        ->assertDontSeeText('Exportar')
+        ->assertDontSeeText('Eliminar');
+});
+
 it('shows existing registrations newest-first with allowed fields and read-only linked-account signals', function () {
     $admin = Admin::factory()->create();
     $raffle = Raffle::factory()->create();
@@ -95,4 +114,45 @@ it('shows existing registrations newest-first with allowed fields and read-only 
         ->assertDontSeeText('Editar')
         ->assertDontSeeText('Abrir participación')
         ->assertDontSeeText('Cerrar participación');
+});
+
+it('shows a read-only non-zero summary while preserving newest-first registrations', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+
+    $olderRegistration = persistedRaffleRegistration($raffle, [
+        'name' => 'Older Summary Guest',
+        'email' => 'older-summary@example.com',
+    ]);
+    $olderRegistration->forceFill([
+        'created_at' => CarbonImmutable::parse('2026-07-01 09:15:00'),
+    ])->save();
+
+    $newerRegistration = persistedRaffleRegistration($raffle, [
+        'name' => 'Newer Summary Guest',
+        'email' => 'newer-summary@example.com',
+    ]);
+    $newerRegistration->forceFill([
+        'created_at' => CarbonImmutable::parse('2026-07-02 11:45:00'),
+    ])->save();
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(adminRaffleUrl("/raffles/{$raffle->id}/registrations"))
+        ->assertOk()
+        ->assertSeeText('Resumen de inscripciones')
+        ->assertSeeText('2 inscripciones registradas para este sorteo.')
+        ->assertSeeInOrder([
+            'Newer Summary Guest',
+            'newer-summary@example.com',
+            'Older Summary Guest',
+            'older-summary@example.com',
+        ], escape: false)
+        ->assertDontSeeText('Todavía no hay inscripciones para este sorteo.')
+        ->assertDontSeeText('Ticket')
+        ->assertDontSeeText('Capacidad')
+        ->assertDontSeeText('Pago')
+        ->assertDontSeeText('Sorteo garantizado')
+        ->assertDontSeeText('Exportar')
+        ->assertDontSeeText('Eliminar');
 });

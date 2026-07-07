@@ -132,7 +132,10 @@ final class RaffleController extends Controller
 
     private function resolvePublicRaffle(int $raffle): Raffle
     {
-        return Raffle::query()->publiclyVisible()->findOrFail($raffle);
+        return Raffle::query()
+            ->publiclyVisible()
+            ->withCount('registrations')
+            ->findOrFail($raffle);
     }
 
     private function resolveParticipationRaffle(int $raffle, bool $allowsStaleUnavailableResponse): ?Raffle
