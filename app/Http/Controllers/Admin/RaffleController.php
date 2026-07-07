@@ -41,7 +41,7 @@ final class RaffleController extends Controller
             'registrations' => fn ($query) => $query
                 ->select(['id', 'raffle_id', 'user_id', 'name', 'email', 'created_at'])
                 ->latest('id'),
-        ]);
+        ])->loadCount('registrations');
 
         return view('admin.raffles.registrations', [
             'raffle' => $raffle,

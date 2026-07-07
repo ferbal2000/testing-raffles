@@ -14,6 +14,13 @@
             </a>
         </div>
 
+        <section class="rounded-xl border border-slate-200 bg-slate-50 p-4" aria-labelledby="registration-summary-title">
+            <h2 id="registration-summary-title" class="text-sm font-medium text-slate-600">{{ __('admin-raffles.registrations.summary_title') }}</h2>
+            <p class="mt-1 text-lg font-semibold text-slate-950">
+                {{ trans_choice('admin-raffles.registrations.summary_count', $raffle->registrations_count, ['count' => $raffle->registrations_count]) }}
+            </p>
+        </section>
+
         @if ($raffle->registrations->isEmpty())
             <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6">
                 <p class="text-lg font-medium text-slate-900">{{ __('admin-raffles.registrations.empty.title') }}</p>

@@ -18,6 +18,7 @@ return [
         'duplicate' => 'Ese correo ya estaba registrado para este sorteo.',
         'unavailable' => 'La participación no está disponible en este momento.',
         'errors' => 'Revisá los datos del formulario e intentá de nuevo.',
+        'registration_count' => '{0} Todavía no hay personas registradas en este sorteo.|{1} 1 persona ya está registrada en este sorteo.|[2,*] :count personas ya están registradas en este sorteo.',
     ],
     'status' => [
         'published' => 'Sorteo publicado',
