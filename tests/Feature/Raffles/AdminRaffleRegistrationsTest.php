@@ -1,10 +1,14 @@
 <?php
 
 use App\Models\Admin;
+use App\Enums\RaffleRegistrationStatus;
 use App\Models\Raffle;
+use App\Models\RaffleRegistration;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+
+use function Pest\Laravel\assertDatabaseHas;
 
 uses(RefreshDatabase::class);
 
@@ -52,7 +56,10 @@ it('shows a read-only zero-registration summary while preserving the empty state
         ->get(adminRaffleUrl("/raffles/{$raffle->id}/registrations"))
         ->assertOk()
         ->assertSeeText('Resumen de inscripciones')
-        ->assertSeeText('0 inscripciones registradas para este sorteo.')
+        ->assertSeeText('0 inscripciones registradas')
+        ->assertSeeText('0 activas')
+        ->assertSeeText('0 para revisión')
+        ->assertSeeText('0 canceladas')
         ->assertSeeText('Todavía no hay inscripciones para este sorteo.')
         ->assertDontSeeText('Ticket')
         ->assertDontSeeText('Capacidad')
@@ -94,10 +101,12 @@ it('shows existing registrations newest-first with allowed fields and read-only 
         ->assertSeeInOrder([
             'Newer Guest',
             'newer@example.com',
+            'Activa',
             '2026-07-02 11:45',
             'Cuenta vinculada',
             'Older Guest',
             'older@example.com',
+            'Activa',
             '2026-07-01 09:15',
             'Sin cuenta vinculada',
         ], escape: false)
@@ -107,8 +116,8 @@ it('shows existing registrations newest-first with allowed fields and read-only 
         ->assertDontSeeText('Ganador')
         ->assertDontSeeText('Aprobar')
         ->assertDontSeeText('Rechazar')
-        ->assertDontSeeText('Cancelar inscripción')
-        ->assertDontSeeText('Marcar como observada')
+        ->assertSeeText('Cancelar inscripción')
+        ->assertSeeText('Marcar para revisión')
         ->assertDontSeeText('Exportar')
         ->assertDontSeeText('Eliminar')
         ->assertDontSeeText('Editar')
@@ -141,7 +150,7 @@ it('shows a read-only non-zero summary while preserving newest-first registratio
         ->get(adminRaffleUrl("/raffles/{$raffle->id}/registrations"))
         ->assertOk()
         ->assertSeeText('Resumen de inscripciones')
-        ->assertSeeText('2 inscripciones registradas para este sorteo.')
+        ->assertSeeText('2 inscripciones registradas')
         ->assertSeeInOrder([
             'Newer Summary Guest',
             'newer-summary@example.com',
@@ -156,3 +165,163 @@ it('shows a read-only non-zero summary while preserving newest-first registratio
         ->assertDontSeeText('Exportar')
         ->assertDontSeeText('Eliminar');
 });
+
+it('shows registration statuses, active-only actions, terminal no-action rows, and separated totals newest-first', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+
+    $registrations = [];
+    foreach ([
+        'active' => ['Active Guest', 'active@example.com', RaffleRegistrationStatus::Active, '2026-07-01 09:15:00'],
+        'flagged' => ['Flagged Guest', 'flagged@example.com', RaffleRegistrationStatus::Flagged, '2026-07-02 11:45:00'],
+        'cancelled' => ['Cancelled Guest', 'cancelled@example.com', RaffleRegistrationStatus::Cancelled, '2026-07-03 17:30:00'],
+    ] as $key => [$name, $email, $status, $createdAt]) {
+        $registrations[$key] = persistedRaffleRegistration($raffle, compact('name', 'email', 'status'));
+        $registrations[$key]->forceFill(['created_at' => CarbonImmutable::parse($createdAt)])->save();
+    }
+
+    $otherRaffle = Raffle::factory()->create();
+    persistedRaffleRegistration($otherRaffle, [
+        'status' => RaffleRegistrationStatus::Active,
+    ]);
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(adminRaffleUrl("/raffles/{$raffle->id}/registrations"))
+        ->assertOk()
+        ->assertSeeText('Activas')
+        ->assertSeeText('1 activa')
+        ->assertSeeText('Para revisión')
+        ->assertSeeText('1 para revisión')
+        ->assertSeeText('Canceladas')
+        ->assertSeeText('1 cancelada')
+        ->assertSeeText('Total registradas')
+        ->assertSeeText('3 inscripciones registradas')
+        ->assertSeeText('Estado')
+        ->assertSeeText('Acciones')
+        ->assertSeeInOrder([
+            'Cancelled Guest',
+            'cancelled@example.com',
+            'Cancelada',
+            'Sin acciones disponibles',
+            'Flagged Guest',
+            'flagged@example.com',
+            'Para revisión',
+            'Sin acciones disponibles',
+            'Active Guest',
+            'active@example.com',
+            'Activa',
+            'Marcar para revisión',
+            'Cancelar inscripción',
+        ], escape: false)
+        ->assertSee(route('admin.raffles.registrations.flag', [$raffle, $registrations['active']]), escape: false)
+        ->assertSee(route('admin.raffles.registrations.cancel', [$raffle, $registrations['active']]), escape: false)
+        ->assertDontSee(route('admin.raffles.registrations.flag', [$raffle, $registrations['flagged']]), escape: false)
+        ->assertDontSee(route('admin.raffles.registrations.cancel', [$raffle, $registrations['flagged']]), escape: false)
+        ->assertDontSee(route('admin.raffles.registrations.flag', [$raffle, $registrations['cancelled']]), escape: false)
+        ->assertDontSee(route('admin.raffles.registrations.cancel', [$raffle, $registrations['cancelled']]), escape: false)
+        ->assertDontSeeText('Aprobar')
+        ->assertDontSeeText('Rechazar')
+        ->assertDontSeeText('Restaurar')
+        ->assertDontSeeText('Reactivar')
+        ->assertDontSeeText('Ticket')
+        ->assertDontSeeText('Pago');
+});
+
+it('flags and cancels active registrations with scoped success feedback', function (string $action, RaffleRegistrationStatus $expectedStatus, string $flashKey, string $feedback) {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle, [
+        'status' => RaffleRegistrationStatus::Active,
+    ]);
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->post(route("admin.raffles.registrations.{$action}", [$raffle, $registration]))
+        ->assertRedirect(route('admin.raffles.registrations.index', $raffle))
+        ->assertSessionHas($flashKey, $feedback)
+        ->assertSessionHasNoErrors();
+
+    assertDatabaseHas(RaffleRegistration::class, [
+        'id' => $registration->id,
+        'raffle_id' => $raffle->id,
+        'status' => $expectedStatus->value,
+    ]);
+})->with([
+    'flag' => ['flag', RaffleRegistrationStatus::Flagged, 'admin.raffles.registration_status_flag_success', 'La inscripción se marcó para revisión.'],
+    'cancel' => ['cancel', RaffleRegistrationStatus::Cancelled, 'admin.raffles.registration_status_cancel_success', 'La inscripción se canceló.'],
+]);
+
+it('rejects terminal registration status actions with unchanged status and scoped errors', function (RaffleRegistrationStatus $initialStatus, string $action) {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle, [
+        'status' => $initialStatus,
+    ]);
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->post(route("admin.raffles.registrations.{$action}", [$raffle, $registration]))
+        ->assertRedirect(route('admin.raffles.registrations.index', $raffle))
+        ->assertSessionHasErrors(['registration_status' => 'Esta acción ya no está disponible para esta inscripción.']);
+
+    assertDatabaseHas(RaffleRegistration::class, [
+        'id' => $registration->id,
+        'raffle_id' => $raffle->id,
+        'status' => $initialStatus->value,
+    ]);
+})->with([
+    'flag flagged' => [RaffleRegistrationStatus::Flagged, 'flag'],
+    'cancel flagged' => [RaffleRegistrationStatus::Flagged, 'cancel'],
+    'flag cancelled' => [RaffleRegistrationStatus::Cancelled, 'flag'],
+    'cancel cancelled' => [RaffleRegistrationStatus::Cancelled, 'cancel'],
+]);
+
+it('does not mutate a registration through another raffles nested status action route', function (string $action) {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $otherRaffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($otherRaffle, [
+        'status' => RaffleRegistrationStatus::Active,
+    ]);
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->post(route("admin.raffles.registrations.{$action}", [$raffle, $registration]))
+        ->assertNotFound();
+
+    assertDatabaseHas(RaffleRegistration::class, [
+        'id' => $registration->id,
+        'raffle_id' => $otherRaffle->id,
+        'status' => RaffleRegistrationStatus::Active->value,
+    ]);
+})->with([
+    'flag' => ['flag'],
+    'cancel' => ['cancel'],
+]);
+
+it('redirects guests to the admin login page for html registration status action requests', function (string $action) {
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle);
+
+    $this->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->post(route("admin.raffles.registrations.{$action}", [$raffle, $registration]))
+        ->assertRedirect(route('admin.login'));
+})->with([
+    'flag' => ['flag'],
+    'cancel' => ['cancel'],
+]);
+
+it('returns 401 for unauthenticated json registration status action requests', function (string $action) {
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle);
+
+    $this->withServerVariables([
+        'HTTP_HOST' => adminRaffleHost(),
+        'HTTP_ACCEPT' => 'application/json',
+    ])->postJson(route("admin.raffles.registrations.{$action}", [$raffle, $registration]))
+        ->assertUnauthorized();
+})->with([
+    'flag' => ['flag'],
+    'cancel' => ['cancel'],
+]);
