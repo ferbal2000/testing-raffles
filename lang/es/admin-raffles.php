@@ -80,14 +80,43 @@ return [
         'description' => 'Consultá las inscripciones ya registradas para este sorteo.',
         'summary_title' => 'Resumen de inscripciones',
         'summary_count' => '{0} 0 inscripciones registradas para este sorteo.|{1} 1 inscripción registrada para este sorteo.|[2,*] :count inscripciones registradas para este sorteo.',
+        'summary' => [
+            'active_label' => 'Activas',
+            'active_count' => '{0} 0 activas|{1} 1 activa|[2,*] :count activas',
+            'flagged_label' => 'Para revisión',
+            'flagged_count' => '{0} 0 para revisión|{1} 1 para revisión|[2,*] :count para revisión',
+            'cancelled_label' => 'Canceladas',
+            'cancelled_count' => '{0} 0 canceladas|{1} 1 cancelada|[2,*] :count canceladas',
+            'total_label' => 'Total registradas',
+            'total_count' => '{0} 0 inscripciones registradas|{1} 1 inscripción registrada|[2,*] :count inscripciones registradas',
+        ],
         'actions' => [
             'back_to_index' => 'Volver al listado',
+            'flag' => 'Marcar para revisión',
+            'flag_confirm' => '¿Marcar esta inscripción para revisión?',
+            'cancel' => 'Cancelar inscripción',
+            'cancel_confirm' => '¿Cancelar esta inscripción?',
+            'none_available' => 'Sin acciones disponibles',
+        ],
+        'flash' => [
+            'flag_success' => 'La inscripción se marcó para revisión.',
+            'cancel_success' => 'La inscripción se canceló.',
+        ],
+        'errors' => [
+            'status_unavailable' => 'Esta acción ya no está disponible para esta inscripción.',
         ],
         'columns' => [
             'name' => 'Nombre',
             'email' => 'Email',
+            'status' => 'Estado',
             'created_at' => 'Registrada',
             'linked_account' => 'Cuenta',
+            'actions' => 'Acciones',
+        ],
+        'status' => [
+            'active' => 'Activa',
+            'flagged' => 'Para revisión',
+            'cancelled' => 'Cancelada',
         ],
         'linked_account' => [
             'yes' => 'Cuenta vinculada',

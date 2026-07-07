@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\RaffleRegistrationStatus;
+use App\Exceptions\InvalidRaffleRegistrationTransition;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -68,5 +69,39 @@ class RaffleRegistration extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function canBeFlagged(): bool
+    {
+        return $this->status === RaffleRegistrationStatus::Active;
+    }
+
+    public function canBeCancelled(): bool
+    {
+        return $this->status === RaffleRegistrationStatus::Active;
+    }
+
+    public function markForReview(): void
+    {
+        if (! $this->canBeFlagged()) {
+            throw InvalidRaffleRegistrationTransition::from(
+                $this->status->value,
+                RaffleRegistrationStatus::Flagged->value,
+            );
+        }
+
+        $this->forceFill(['status' => RaffleRegistrationStatus::Flagged]);
+    }
+
+    public function cancel(): void
+    {
+        if (! $this->canBeCancelled()) {
+            throw InvalidRaffleRegistrationTransition::from(
+                $this->status->value,
+                RaffleRegistrationStatus::Cancelled->value,
+            );
+        }
+
+        $this->forceFill(['status' => RaffleRegistrationStatus::Cancelled]);
     }
 }

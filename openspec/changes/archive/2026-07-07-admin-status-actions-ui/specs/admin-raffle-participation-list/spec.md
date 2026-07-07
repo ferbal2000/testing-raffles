@@ -1,14 +1,11 @@
-# Admin Raffle Participation List Specification
+# Delta for Admin Raffle Participation List
 
-## Purpose
-
-Define admin-only per-raffle visibility into stored guest registrations without introducing operational participation management.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Protected per-raffle registration visibility
 
 The system MUST expose an admin-host page at `GET /raffles/{raffle}/registrations` for authenticated admins only. The page MUST list stored registrations for that raffle newest-first and MUST show `name`, normalized `email`, `created_at`, linked-user signal, and status. Active rows MAY expose flag/cancel admin actions; flagged/cancelled rows MUST NOT expose further mutation. The page MUST NOT imply ticket, payment, draw, export, notification, restore, or generic workflow semantics.
+(Previously: the page was status-blind and strictly read-only.)
 
 #### Scenario: Authenticated admin opens a raffle registration list
 
@@ -26,6 +23,7 @@ The system MUST expose an admin-host page at `GET /raffles/{raffle}/registration
 ### Requirement: Explicit empty and sparse registration states
 
 The system MUST show an explicit empty state when a raffle has no stored registrations. The system MUST also render registrations that lack an existing linked-user signal without inventing account linkage; only eligible active registration status actions MAY be shown.
+(Previously: sparse rows could not include any admin actions.)
 
 #### Scenario: Raffle has no registrations
 
@@ -43,6 +41,7 @@ The system MUST show an explicit empty state when a raffle has no stored registr
 ### Requirement: Read-only current raffle registration summary
 
 The system MUST show summary counts for the current raffle on `GET /raffles/{raffle}/registrations`. Counts MUST reflect persisted registrations for that raffle only and MUST visually separate active from cancelled totals so annulled registrations are not collapsed into one ambiguous total.
+(Previously: the page showed one read-only total for all persisted registrations.)
 
 #### Scenario: Summary count appears with registrations
 
