@@ -1,10 +1,6 @@
-# Admin Raffle Participation List Specification
+# Delta for Admin Raffle Participation List
 
-## Purpose
-
-Define admin-only per-raffle visibility into stored guest registrations without introducing operational participation management.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Protected per-raffle registration visibility
 
@@ -42,21 +38,3 @@ The system MUST show an explicit empty state when a raffle has no stored registr
 - WHEN an authenticated admin opens the registrations page
 - THEN the system still shows the registration row
 - AND the page does not invent account linkage
-
-### Requirement: Read-only current raffle registration summary
-
-The system MUST show summary counts for the current raffle on `GET /raffles/{raffle}/registrations`. Counts MUST reflect persisted registrations for that raffle only and MUST visually separate active from cancelled totals so annulled registrations are not collapsed into one ambiguous total.
-
-#### Scenario: Summary count appears with registrations
-
-- GIVEN an authenticated admin opens a raffle registration list with active and cancelled registrations
-- WHEN the page is rendered
-- THEN active and cancelled totals are visually separated
-- AND the registration list remains newest-first
-
-#### Scenario: Summary count appears for empty list
-
-- GIVEN an authenticated admin opens a raffle registration list with no stored registrations
-- WHEN the page is rendered
-- THEN the active and cancelled totals reflect zero persisted registrations
-- AND the explicit empty state remains visible
