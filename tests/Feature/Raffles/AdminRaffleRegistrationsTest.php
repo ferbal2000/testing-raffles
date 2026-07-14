@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Admin;
 use App\Enums\RaffleRegistrationStatus;
+use App\Models\Admin;
 use App\Models\Raffle;
 use App\Models\RaffleRegistration;
 use App\Models\User;
@@ -9,6 +9,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 
+use function Pest\Laravel\assertDatabaseCount;
 use function Pest\Laravel\assertDatabaseHas;
 
 uses(RefreshDatabase::class);
@@ -167,7 +168,7 @@ it('shows a read-only non-zero summary while preserving newest-first registratio
         ->assertDontSeeText('Eliminar');
 });
 
-it('shows registration statuses, active-only actions, terminal no-action rows, and separated totals newest-first', function () {
+it('shows status-specific actions, separated totals, and registrations newest-first', function () {
     $admin = Admin::factory()->create();
     $raffle = Raffle::factory()->create();
 
@@ -186,10 +187,13 @@ it('shows registration statuses, active-only actions, terminal no-action rows, a
         'status' => RaffleRegistrationStatus::Active,
     ]);
 
-    $this->actingAs($admin, 'admin')
+    $restoreUrl = route('admin.raffles.registrations.restore', [$raffle, $registrations['flagged']]);
+
+    $response = $this->actingAs($admin, 'admin')
         ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
-        ->get(adminRaffleUrl("/raffles/{$raffle->id}/registrations"))
-        ->assertOk()
+        ->get(adminRaffleUrl("/raffles/{$raffle->id}/registrations"));
+
+    $response->assertOk()
         ->assertSeeText('Activas')
         ->assertSeeText('1 activa')
         ->assertSeeText('Para revisión')
@@ -208,7 +212,7 @@ it('shows registration statuses, active-only actions, terminal no-action rows, a
             'Flagged Guest',
             'flagged@example.com',
             'Para revisión',
-            'Sin acciones disponibles',
+            'Quitar de revisión',
             'Active Guest',
             'active@example.com',
             'Activa',
@@ -217,16 +221,105 @@ it('shows registration statuses, active-only actions, terminal no-action rows, a
         ], escape: false)
         ->assertSee(route('admin.raffles.registrations.flag', [$raffle, $registrations['active']]), escape: false)
         ->assertSee(route('admin.raffles.registrations.cancel', [$raffle, $registrations['active']]), escape: false)
+        ->assertDontSee(route('admin.raffles.registrations.restore', [$raffle, $registrations['active']]), escape: false)
         ->assertDontSee(route('admin.raffles.registrations.flag', [$raffle, $registrations['flagged']]), escape: false)
         ->assertDontSee(route('admin.raffles.registrations.cancel', [$raffle, $registrations['flagged']]), escape: false)
+        ->assertSee($restoreUrl, escape: false)
         ->assertDontSee(route('admin.raffles.registrations.flag', [$raffle, $registrations['cancelled']]), escape: false)
         ->assertDontSee(route('admin.raffles.registrations.cancel', [$raffle, $registrations['cancelled']]), escape: false)
+        ->assertDontSee(route('admin.raffles.registrations.restore', [$raffle, $registrations['cancelled']]), escape: false)
+        ->assertSee('¿Quitar esta inscripción de revisión y restaurarla a activa?')
+        ->assertSee('<input type="hidden" name="_token" value="'.csrf_token().'" autocomplete="off">', escape: false)
         ->assertDontSeeText('Aprobar')
         ->assertDontSeeText('Rechazar')
-        ->assertDontSeeText('Restaurar')
         ->assertDontSeeText('Reactivar')
         ->assertDontSeeText('Ticket')
         ->assertDontSeeText('Pago');
+
+    expect(substr_count($response->getContent(), $restoreUrl))->toBe(1);
+});
+
+it('shows scoped review-cleared success feedback on the registrations page', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+
+    $this->actingAs($admin, 'admin')
+        ->withSession([
+            'admin.raffles.registration_status_restore_success' => 'La inscripción se quitó de revisión y se restauró a activa.',
+        ])
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(adminRaffleUrl("/raffles/{$raffle->id}/registrations"))
+        ->assertOk()
+        ->assertSeeText('La inscripción se quitó de revisión y se restauró a activa.');
+});
+
+it('renders every status action boundary and restores a flagged row through the admin http flow', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $activeRegistration = persistedRaffleRegistration($raffle, [
+        'name' => 'Active Runtime Guest',
+        'status' => RaffleRegistrationStatus::Active,
+    ]);
+    $flaggedRegistration = persistedRaffleRegistration($raffle, [
+        'name' => 'Flagged Runtime Guest',
+        'status' => RaffleRegistrationStatus::Flagged,
+    ]);
+    $cancelledRegistration = persistedRaffleRegistration($raffle, [
+        'name' => 'Cancelled Runtime Guest',
+        'status' => RaffleRegistrationStatus::Cancelled,
+    ]);
+    $indexUrl = adminRaffleUrl("/raffles/{$raffle->id}/registrations");
+    $restoreUrl = route('admin.raffles.registrations.restore', [$raffle, $flaggedRegistration]);
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get($indexUrl)
+        ->assertOk()
+        ->assertSee(route('admin.raffles.registrations.flag', [$raffle, $activeRegistration]), escape: false)
+        ->assertSee(route('admin.raffles.registrations.cancel', [$raffle, $activeRegistration]), escape: false)
+        ->assertSee($restoreUrl, escape: false)
+        ->assertDontSee(route('admin.raffles.registrations.restore', [$raffle, $cancelledRegistration]), escape: false);
+
+    $this->actingAs($admin, 'admin')
+        ->followingRedirects()
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->post($restoreUrl)
+        ->assertOk()
+        ->assertSeeText('La inscripción se quitó de revisión y se restauró a activa.')
+        ->assertSeeText('2 activas')
+        ->assertSeeText('0 para revisión')
+        ->assertSee(route('admin.raffles.registrations.flag', [$raffle, $flaggedRegistration]), escape: false)
+        ->assertSee(route('admin.raffles.registrations.cancel', [$raffle, $flaggedRegistration]), escape: false)
+        ->assertDontSee($restoreUrl, escape: false);
+
+    expect($flaggedRegistration->fresh()->status)->toBe(RaffleRegistrationStatus::Active)
+        ->and($cancelledRegistration->fresh()->status)->toBe(RaffleRegistrationStatus::Cancelled);
+});
+
+it('preserves public registration eligibility and creates active registrations', function () {
+    $raffle = Raffle::factory()
+        ->published()
+        ->openedForParticipation(CarbonImmutable::parse('2026-07-01 09:00:00'))
+        ->create();
+    $publicHost = (string) parse_url((string) config('app.public_url'), PHP_URL_HOST);
+    $publicUrl = rtrim((string) config('app.public_url'), '/');
+
+    $this->followingRedirects()
+        ->withServerVariables(['HTTP_HOST' => $publicHost])
+        ->post("{$publicUrl}/raffles/{$raffle->id}/participation", [
+            'name' => 'Public Regression Guest',
+            'email' => ' PUBLIC-REGRESSION@Example.COM ',
+        ])
+        ->assertOk()
+        ->assertSeeText('Tu participación quedó registrada.');
+
+    assertDatabaseHas(RaffleRegistration::class, [
+        'raffle_id' => $raffle->id,
+        'name' => 'Public Regression Guest',
+        'email' => 'public-regression@example.com',
+        'status' => RaffleRegistrationStatus::Active->value,
+    ]);
+    assertDatabaseCount(RaffleRegistration::class, 1);
 });
 
 it('flags and cancels active registrations with scoped success feedback', function (string $action, RaffleRegistrationStatus $expectedStatus, string $flashKey, string $feedback) {

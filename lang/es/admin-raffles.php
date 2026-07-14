@@ -96,11 +96,14 @@ return [
             'flag_confirm' => '¿Marcar esta inscripción para revisión?',
             'cancel' => 'Cancelar inscripción',
             'cancel_confirm' => '¿Cancelar esta inscripción?',
+            'restore' => 'Quitar de revisión',
+            'restore_confirm' => '¿Quitar esta inscripción de revisión y restaurarla a activa?',
             'none_available' => 'Sin acciones disponibles',
         ],
         'flash' => [
             'flag_success' => 'La inscripción se marcó para revisión.',
             'cancel_success' => 'La inscripción se canceló.',
+            'restore_success' => 'La inscripción se quitó de revisión y se restauró a activa.',
         ],
         'errors' => [
             'status_unavailable' => 'Esta acción ya no está disponible para esta inscripción.',
