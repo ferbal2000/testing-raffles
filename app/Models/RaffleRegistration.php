@@ -81,6 +81,11 @@ class RaffleRegistration extends Model
         return $this->status === RaffleRegistrationStatus::Active;
     }
 
+    public function canBeRestored(): bool
+    {
+        return $this->status === RaffleRegistrationStatus::Flagged;
+    }
+
     public function markForReview(): void
     {
         if (! $this->canBeFlagged()) {
@@ -103,5 +108,17 @@ class RaffleRegistration extends Model
         }
 
         $this->forceFill(['status' => RaffleRegistrationStatus::Cancelled]);
+    }
+
+    public function restoreToActive(): void
+    {
+        if (! $this->canBeRestored()) {
+            throw InvalidRaffleRegistrationTransition::from(
+                $this->status->value,
+                RaffleRegistrationStatus::Active->value,
+            );
+        }
+
+        $this->forceFill(['status' => RaffleRegistrationStatus::Active]);
     }
 }
