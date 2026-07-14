@@ -7,6 +7,7 @@ use App\Models\RaffleRegistration;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 
 use function Pest\Laravel\assertDatabaseHas;
 
@@ -325,3 +326,181 @@ it('returns 401 for unauthenticated json registration status action requests', f
     'flag' => ['flag'],
     'cancel' => ['cancel'],
 ]);
+
+it('allows restore only for flagged registrations', function (RaffleRegistrationStatus $status, bool $expected) {
+    $registration = new RaffleRegistration(['status' => $status]);
+
+    expect($registration->canBeRestored())->toBe($expected);
+})->with([
+    'active' => [RaffleRegistrationStatus::Active, false],
+    'flagged' => [RaffleRegistrationStatus::Flagged, true],
+    'cancelled' => [RaffleRegistrationStatus::Cancelled, false],
+]);
+
+it('restores a flagged registration to active with scoped success feedback', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle, [
+        'status' => RaffleRegistrationStatus::Flagged,
+    ]);
+
+    expect($registration->canBeRestored())->toBeTrue();
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->post(adminRaffleUrl("/raffles/{$raffle->id}/registrations/{$registration->id}/restore"))
+        ->assertRedirect(route('admin.raffles.registrations.index', $raffle))
+        ->assertSessionHas(
+            'admin.raffles.registration_status_restore_success',
+            trans('admin-raffles.registrations.flash.restore_success'),
+        )
+        ->assertSessionHasNoErrors();
+
+    assertDatabaseHas(RaffleRegistration::class, [
+        'id' => $registration->id,
+        'raffle_id' => $raffle->id,
+        'status' => RaffleRegistrationStatus::Active->value,
+    ]);
+});
+
+it('reports repeated restore as unavailable after restoring a flagged registration', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle, [
+        'status' => RaffleRegistrationStatus::Flagged,
+    ]);
+    $restoreUrl = adminRaffleUrl("/raffles/{$raffle->id}/registrations/{$registration->id}/restore");
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->post($restoreUrl)
+        ->assertRedirect(route('admin.raffles.registrations.index', $raffle))
+        ->assertSessionHas('admin.raffles.registration_status_restore_success')
+        ->assertSessionHasNoErrors();
+
+    expect($registration->fresh()->status)->toBe(RaffleRegistrationStatus::Active);
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->post($restoreUrl)
+        ->assertRedirect(route('admin.raffles.registrations.index', $raffle))
+        ->assertSessionMissing('admin.raffles.registration_status_restore_success')
+        ->assertSessionHasErrors(['registration_status' => 'Esta acción ya no está disponible para esta inscripción.']);
+
+    expect($registration->fresh()->status)->toBe(RaffleRegistrationStatus::Active);
+});
+
+it('rejects restore for non-flagged registrations with unchanged status and scoped errors', function (RaffleRegistrationStatus $status) {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle, compact('status'));
+
+    expect($registration->canBeRestored())->toBeFalse();
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->post(adminRaffleUrl("/raffles/{$raffle->id}/registrations/{$registration->id}/restore"))
+        ->assertRedirect(route('admin.raffles.registrations.index', $raffle))
+        ->assertSessionMissing('admin.raffles.registration_status_restore_success')
+        ->assertSessionHasErrors(['registration_status' => 'Esta acción ya no está disponible para esta inscripción.']);
+
+    assertDatabaseHas(RaffleRegistration::class, [
+        'id' => $registration->id,
+        'raffle_id' => $raffle->id,
+        'status' => $status->value,
+    ]);
+})->with([
+    'active' => [RaffleRegistrationStatus::Active],
+    'cancelled' => [RaffleRegistrationStatus::Cancelled],
+]);
+
+it('returns bare not found when restore targets another raffles scope', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $otherRaffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($otherRaffle, [
+        'status' => RaffleRegistrationStatus::Flagged,
+    ]);
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->post(adminRaffleUrl("/raffles/{$raffle->id}/registrations/{$registration->id}/restore"))
+        ->assertNotFound()
+        ->assertSessionMissing('admin.raffles.registration_status_restore_success')
+        ->assertSessionHasNoErrors();
+
+    assertDatabaseHas(RaffleRegistration::class, [
+        'id' => $registration->id,
+        'raffle_id' => $otherRaffle->id,
+        'status' => RaffleRegistrationStatus::Flagged->value,
+    ]);
+});
+
+it('redirects guests to the admin login page for html restore requests', function () {
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle, [
+        'status' => RaffleRegistrationStatus::Flagged,
+    ]);
+
+    $this->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->post(adminRaffleUrl("/raffles/{$raffle->id}/registrations/{$registration->id}/restore"))
+        ->assertRedirect(route('admin.login'));
+});
+
+it('returns 401 for unauthenticated json restore requests', function () {
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle, [
+        'status' => RaffleRegistrationStatus::Flagged,
+    ]);
+
+    $this->withServerVariables([
+        'HTTP_HOST' => adminRaffleHost(),
+        'HTTP_ACCEPT' => 'application/json',
+    ])->postJson(adminRaffleUrl("/raffles/{$raffle->id}/registrations/{$registration->id}/restore"))
+        ->assertUnauthorized();
+});
+
+it('rejects get requests to the restore endpoint', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle, [
+        'status' => RaffleRegistrationStatus::Flagged,
+    ]);
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(adminRaffleUrl("/raffles/{$raffle->id}/registrations/{$registration->id}/restore"))
+        ->assertMethodNotAllowed();
+
+    expect($registration->fresh()->status)->toBe(RaffleRegistrationStatus::Flagged);
+});
+
+it('rejects nonnumeric restore route parameters', function (callable $path) {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle, [
+        'status' => RaffleRegistrationStatus::Flagged,
+    ]);
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->post(adminRaffleUrl($path($raffle, $registration)))
+        ->assertNotFound();
+
+    expect($registration->fresh()->status)->toBe(RaffleRegistrationStatus::Flagged);
+})->with([
+    'raffle parameter' => [fn (Raffle $raffle, RaffleRegistration $registration): string => "/raffles/not-a-number/registrations/{$registration->id}/restore"],
+    'registration parameter' => [fn (Raffle $raffle): string => "/raffles/{$raffle->id}/registrations/not-a-number/restore"],
+]);
+
+it('keeps the named restore route in the web and admin authentication middleware', function () {
+    $route = Route::getRoutes()->getByName('admin.raffles.registrations.restore');
+
+    expect($route)->not->toBeNull()
+        ->and($route->methods())->toBe(['POST'])
+        ->and($route->gatherMiddleware())->toContain('web', 'auth:admin')
+        ->and($route->wheres)->toMatchArray([
+            'raffle' => '[0-9]+',
+            'registration' => '[0-9]+',
+        ]);
+});

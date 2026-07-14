@@ -161,6 +161,17 @@ final class RaffleController extends Controller
         );
     }
 
+    public function restoreRegistration(Raffle $raffle, int|string $registration): RedirectResponse
+    {
+        return $this->transitionRegistration(
+            $raffle,
+            $registration,
+            fn (RaffleRegistration $registration): null => $registration->restoreToActive(),
+            'admin.raffles.registration_status_restore_success',
+            trans('admin-raffles.registrations.flash.restore_success'),
+        );
+    }
+
     private function adminActor(Request $request): Admin
     {
         $admin = $request->user('admin');
