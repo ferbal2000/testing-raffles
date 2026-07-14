@@ -26,6 +26,12 @@
             </div>
         @endif
 
+        @if (session('admin.raffles.registration_status_restore_success'))
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-900">
+                {{ session('admin.raffles.registration_status_restore_success') }}
+            </div>
+        @endif
+
         @error('registration_status')
             <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-900">
                 {{ $message }}
@@ -85,7 +91,7 @@
                                 <td class="px-4 py-3">{{ $registration->created_at?->format('Y-m-d H:i') }}</td>
                                 <td class="px-4 py-3">{{ $linkedAccountLabel }}</td>
                                 <td class="px-4 py-3">
-                                    @if ($registration->canBeFlagged() || $registration->canBeCancelled())
+                                    @if ($registration->canBeFlagged() || $registration->canBeCancelled() || $registration->canBeRestored())
                                         <div class="flex flex-wrap gap-2">
                                             @if ($registration->canBeFlagged())
                                                 <form method="POST" action="{{ route('admin.raffles.registrations.flag', [$raffle, $registration]) }}">
@@ -108,6 +114,18 @@
                                                         onclick="return confirm('{{ __('admin-raffles.registrations.actions.cancel_confirm') }}')"
                                                     >
                                                         {{ __('admin-raffles.registrations.actions.cancel') }}
+                                                    </button>
+                                                </form>
+                                            @endif
+                                            @if ($registration->canBeRestored())
+                                                <form method="POST" action="{{ route('admin.raffles.registrations.restore', [$raffle, $registration]) }}">
+                                                    @csrf
+                                                    <button
+                                                        type="submit"
+                                                        class="rounded-lg border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50"
+                                                        onclick="return confirm('{{ __('admin-raffles.registrations.actions.restore_confirm') }}')"
+                                                    >
+                                                        {{ __('admin-raffles.registrations.actions.restore') }}
                                                     </button>
                                                 </form>
                                             @endif
