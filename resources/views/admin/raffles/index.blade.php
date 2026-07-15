@@ -44,6 +44,12 @@
             </div>
         @endif
 
+        @if (session('admin.raffles.close_success'))
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {{ session('admin.raffles.close_success') }}
+            </div>
+        @endif
+
         @if ($errors->has('participation'))
             <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
                 {{ $errors->first('participation') }}
@@ -53,6 +59,12 @@
         @if ($errors->has('publish'))
             <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
                 {{ $errors->first('publish') }}
+            </div>
+        @endif
+
+        @if ($errors->has('close'))
+            <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                {{ $errors->first('close') }}
             </div>
         @endif
 
@@ -137,6 +149,19 @@
                                                     class="inline-flex items-center justify-center rounded-lg border border-amber-300 px-3 py-1.5 font-medium text-amber-700 transition hover:bg-amber-50"
                                                 >
                                                     {{ __('admin-raffles.index.actions.close_participation') }}
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        @if ($raffle->canClose())
+                                            <form method="POST" action="{{ route('admin.raffles.close', $raffle) }}" onsubmit="return confirm(@js(__('admin-raffles.index.actions.close_confirm')))">
+                                                @csrf
+
+                                                <button
+                                                    type="submit"
+                                                    class="inline-flex items-center justify-center rounded-lg border border-rose-300 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-50"
+                                                >
+                                                    {{ __('admin-raffles.index.actions.close') }}
                                                 </button>
                                             </form>
                                         @endif

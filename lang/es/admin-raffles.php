@@ -13,6 +13,8 @@ return [
             'publish_confirm' => '¿Publicar este sorteo?',
             'open_participation' => 'Abrir participación',
             'close_participation' => 'Cerrar participación',
+            'close' => 'Cerrar sorteo',
+            'close_confirm' => '¿Cerrar este sorteo? Si la participación está activa, se cerrará. No se puede reabrir en esta versión.',
         ],
         'registration_count' => '{0} 0 inscripciones|{1} 1 inscripción|[2,*] :count inscripciones',
         'flash' => [
