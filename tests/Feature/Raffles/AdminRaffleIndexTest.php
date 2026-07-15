@@ -219,6 +219,89 @@ it('shows a confirmed publish action only for draft raffle rows', function () {
         ->assertDontSee(route('admin.raffles.publish', $closedRaffle), escape: false);
 });
 
+it('shows the confirmed overall close action for every published participation state', function () {
+    $admin = Admin::factory()->create();
+    $activeParticipation = Raffle::factory()->published()->openedForParticipation()->create();
+    $closedParticipation = Raffle::factory()->published()->participationClosed()->create();
+    $neverOpenedParticipation = Raffle::factory()->published()->create();
+
+    raffleIndexResponse($admin)
+        ->assertOk()
+        ->assertSee(route('admin.raffles.close', $activeParticipation), escape: false)
+        ->assertSee(route('admin.raffles.close', $closedParticipation), escape: false)
+        ->assertSee(route('admin.raffles.close', $neverOpenedParticipation), escape: false)
+        ->assertSeeTextInOrder([
+            __('admin-raffles.index.actions.close'),
+            __('admin-raffles.index.actions.close'),
+            __('admin-raffles.index.actions.close'),
+        ]);
+});
+
+it('hides the overall close action from draft and closed raffle rows', function () {
+    $admin = Admin::factory()->create();
+    $draftRaffle = Raffle::factory()->create();
+    $closedRaffle = Raffle::factory()->closed()->create();
+
+    raffleIndexResponse($admin)
+        ->assertOk()
+        ->assertDontSee(route('admin.raffles.close', $draftRaffle), escape: false)
+        ->assertDontSee(route('admin.raffles.close', $closedRaffle), escape: false)
+        ->assertDontSeeText(__('admin-raffles.index.actions.close'));
+});
+
+it('warns about participation closure and unavailable reopening before submit certification', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->published()->openedForParticipation()->create();
+
+    $response = raffleIndexResponse($admin)->assertOk();
+    $closeUrl = route('admin.raffles.close', $raffle);
+    $confirmation = __('admin-raffles.index.actions.close_confirm');
+
+    expect($response->getContent())
+        ->toContain('method="POST" action="'.$closeUrl.'"')
+        ->toContain('onsubmit="return confirm(')
+        ->toContain('type="submit"')
+        ->not->toContain('name="certification"');
+
+    $response
+        ->assertSeeText(__('admin-raffles.index.actions.close'))
+        ->assertSee($confirmation, escape: false);
+});
+
+it('uses the confirmed form submission as certification and shows only translated success feedback', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->published()->create();
+    $success = __('admin-raffles.index.flash.close_success');
+    $rejection = __('admin-raffles.index.errors.close_unavailable');
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->from(route('admin.raffles.index'))
+        ->followingRedirects()
+        ->post(adminRaffleUrl("/raffles/{$raffle->id}/close"))
+        ->assertOk()
+        ->assertSeeText($success)
+        ->assertDontSeeText($rejection);
+
+    expect($raffle->fresh()->status->value)->toBe('closed');
+});
+
+it('shows scoped translated overall close rejection without success feedback', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $success = __('admin-raffles.index.flash.close_success');
+    $rejection = __('admin-raffles.index.errors.close_unavailable');
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->from(route('admin.raffles.index'))
+        ->followingRedirects()
+        ->post(adminRaffleUrl("/raffles/{$raffle->id}/close"))
+        ->assertOk()
+        ->assertSeeText($rejection)
+        ->assertDontSeeText($success);
+});
+
 it('shows a scoped publish success flash after a matching redirect', function () {
     $admin = Admin::factory()->create();
 
