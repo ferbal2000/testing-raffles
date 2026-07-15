@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\RaffleRegistrationStatus;
+use App\Models\Admin;
 use App\Models\Raffle;
 use App\Models\RaffleRegistration;
 use Carbon\CarbonImmutable;
@@ -231,6 +232,34 @@ it('revalidates eligibility server-side for stale pages before storing a registr
     assertDatabaseCount(RaffleRegistration::class, 0);
 });
 
+it('rejects a stale public submission after the admin close endpoint freezes participation', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()
+        ->published()
+        ->openedForParticipation(CarbonImmutable::parse('2026-07-01 09:00:00'))
+        ->create();
+
+    $this->withServerVariables(['HTTP_HOST' => publicParticipationHost()])
+        ->get(publicParticipationUrl("/raffles/{$raffle->id}"))
+        ->assertOk();
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->post(adminRaffleUrl("/raffles/{$raffle->id}/close"))
+        ->assertRedirect(route('admin.raffles.index'))
+        ->assertSessionHas('admin.raffles.close_success');
+
+    $this->withServerVariables(['HTTP_HOST' => publicParticipationHost()])
+        ->post(publicParticipationUrl("/raffles/{$raffle->id}/participation"), [
+            'name' => 'Ada Lovelace',
+            'email' => 'ada@example.com',
+        ])
+        ->assertRedirect(route('public.home'))
+        ->assertSessionHas('public.raffles.participation_unavailable');
+
+    assertDatabaseCount(RaffleRegistration::class, 0);
+});
+
 it('returns a friendly unavailable response when a stale submit targets a raffle that is no longer public', function () {
     $raffle = Raffle::factory()
         ->published()
@@ -241,7 +270,7 @@ it('returns a friendly unavailable response when a stale submit targets a raffle
         ->get(publicParticipationUrl("/raffles/{$raffle->id}"))
         ->assertOk();
 
-    $raffle->close();
+    $raffle->close(CarbonImmutable::now(), 'raffle_closed', null);
 
     $response = $this->withServerVariables(['HTTP_HOST' => publicParticipationHost()])
         ->post(publicParticipationUrl("/raffles/{$raffle->id}/participation"), [
@@ -278,7 +307,7 @@ it('returns unavailable before validation for stale submits to raffles that beca
         ->get(publicParticipationUrl("/raffles/{$raffle->id}"))
         ->assertOk();
 
-    $raffle->close();
+    $raffle->close(CarbonImmutable::now(), 'raffle_closed', null);
 
     $response = $this->from(publicParticipationUrl("/raffles/{$raffle->id}"))
         ->withServerVariables(['HTTP_HOST' => publicParticipationHost()])
@@ -304,7 +333,7 @@ it('shows unavailable feedback on the public catalog when a stale submit targets
         ->get(publicParticipationUrl("/raffles/{$raffle->id}"))
         ->assertOk();
 
-    $raffle->close();
+    $raffle->close(CarbonImmutable::now(), 'raffle_closed', null);
 
     $this->followingRedirects()
         ->withServerVariables(['HTTP_HOST' => publicParticipationHost()])

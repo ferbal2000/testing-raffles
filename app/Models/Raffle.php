@@ -78,15 +78,30 @@ class Raffle extends Model
         return $this->status === RaffleStatus::Draft;
     }
 
-    public function close(): void
+    public function close(?CarbonImmutable $closedAt = null, string $reason = 'raffle_closed', ?Admin $admin = null): void
     {
         $this->ensureIsPersisted();
 
-        if ($this->status !== RaffleStatus::Published) {
+        if (! $this->canClose()) {
             throw InvalidRaffleTransition::from($this->status->value, RaffleStatus::Closed->value);
         }
 
-        $this->forceFill(['status' => RaffleStatus::Closed])->save();
+        $attributes = ['status' => RaffleStatus::Closed];
+
+        if ($this->canCloseParticipation()) {
+            $attributes += [
+                'participation_closed_at' => $closedAt ?? CarbonImmutable::now(),
+                'participation_closed_reason' => $reason,
+                'participation_closed_by_admin_id' => $admin?->getKey(),
+            ];
+        }
+
+        $this->forceFill($attributes)->save();
+    }
+
+    public function canClose(): bool
+    {
+        return $this->status === RaffleStatus::Published;
     }
 
     public function canAcceptParticipants(): bool

@@ -41,7 +41,7 @@ class RaffleFactory extends Factory
     {
         return $this->afterCreating(function (Raffle $raffle): void {
             $raffle->publish();
-            $raffle->close();
+            $raffle->close(CarbonImmutable::now(), 'raffle_closed', null);
         });
     }
 

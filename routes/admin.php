@@ -24,27 +24,32 @@ $adminBoundaryProbePayload = function (Request $request): array {
     ];
 };
 
+$registerAuthenticatedRaffleRoutes = function (): void {
+    Route::get('/raffles', [RaffleController::class, 'index'])->name('admin.raffles.index');
+    Route::get('/raffles/create', [RaffleController::class, 'create'])->name('admin.raffles.create');
+    Route::get('/raffles/{raffle}/edit', [RaffleController::class, 'edit'])->name('admin.raffles.edit');
+    Route::get('/raffles/{raffle}/registrations', [RaffleController::class, 'registrations'])->name('admin.raffles.registrations.index');
+    Route::post('/raffles/{raffle}/registrations/{registration}/flag', [RaffleController::class, 'flagRegistration'])->whereNumber('registration')->name('admin.raffles.registrations.flag');
+    Route::post('/raffles/{raffle}/registrations/{registration}/cancel', [RaffleController::class, 'cancelRegistration'])->whereNumber('registration')->name('admin.raffles.registrations.cancel');
+    Route::post('/raffles/{raffle}/registrations/{registration}/restore', [RaffleController::class, 'restoreRegistration'])->whereNumber('raffle')->whereNumber('registration')->name('admin.raffles.registrations.restore');
+    Route::post('/raffles', [RaffleController::class, 'store'])->name('admin.raffles.store');
+    Route::patch('/raffles/{raffle}', [RaffleController::class, 'update'])->name('admin.raffles.update');
+    Route::post('/raffles/{raffle}/publish', [RaffleController::class, 'publish'])->name('admin.raffles.publish');
+    Route::post('/raffles/{raffle}/close', [RaffleController::class, 'close'])->whereNumber('raffle')->name('admin.raffles.close');
+    Route::post('/raffles/{raffle}/participation/open', [RaffleController::class, 'openParticipation'])->name('admin.raffles.participation.open');
+    Route::post('/raffles/{raffle}/participation/close', [RaffleController::class, 'closeParticipation'])->name('admin.raffles.participation.close');
+};
+
 if (is_string($adminHost) && $adminHost !== '') {
-    Route::domain($adminHost)->group(function () use ($adminBoundaryProbePayload): void {
+    Route::domain($adminHost)->group(function () use ($adminBoundaryProbePayload, $registerAuthenticatedRaffleRoutes): void {
         Route::middleware('guest:admin')->group(function (): void {
             Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('admin.login');
             Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('admin.login.store');
         });
 
-        Route::middleware('auth:admin')->group(function (): void {
+        Route::middleware('auth:admin')->group(function () use ($registerAuthenticatedRaffleRoutes): void {
             Route::view('/', 'admin.home')->name('admin.home');
-            Route::get('/raffles', [RaffleController::class, 'index'])->name('admin.raffles.index');
-            Route::get('/raffles/create', [RaffleController::class, 'create'])->name('admin.raffles.create');
-            Route::get('/raffles/{raffle}/edit', [RaffleController::class, 'edit'])->name('admin.raffles.edit');
-            Route::get('/raffles/{raffle}/registrations', [RaffleController::class, 'registrations'])->name('admin.raffles.registrations.index');
-            Route::post('/raffles/{raffle}/registrations/{registration}/flag', [RaffleController::class, 'flagRegistration'])->whereNumber('registration')->name('admin.raffles.registrations.flag');
-            Route::post('/raffles/{raffle}/registrations/{registration}/cancel', [RaffleController::class, 'cancelRegistration'])->whereNumber('registration')->name('admin.raffles.registrations.cancel');
-            Route::post('/raffles/{raffle}/registrations/{registration}/restore', [RaffleController::class, 'restoreRegistration'])->whereNumber('raffle')->whereNumber('registration')->name('admin.raffles.registrations.restore');
-            Route::post('/raffles', [RaffleController::class, 'store'])->name('admin.raffles.store');
-            Route::patch('/raffles/{raffle}', [RaffleController::class, 'update'])->name('admin.raffles.update');
-            Route::post('/raffles/{raffle}/publish', [RaffleController::class, 'publish'])->name('admin.raffles.publish');
-            Route::post('/raffles/{raffle}/participation/open', [RaffleController::class, 'openParticipation'])->name('admin.raffles.participation.open');
-            Route::post('/raffles/{raffle}/participation/close', [RaffleController::class, 'closeParticipation'])->name('admin.raffles.participation.close');
+            $registerAuthenticatedRaffleRoutes();
             Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
         });
 
@@ -68,20 +73,9 @@ if (is_string($adminHost) && $adminHost !== '') {
         Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('admin.login.store');
     });
 
-    Route::middleware('auth:admin')->group(function (): void {
+    Route::middleware('auth:admin')->group(function () use ($registerAuthenticatedRaffleRoutes): void {
         Route::view('/', 'admin.home')->name('admin.home');
-        Route::get('/raffles', [RaffleController::class, 'index'])->name('admin.raffles.index');
-        Route::get('/raffles/create', [RaffleController::class, 'create'])->name('admin.raffles.create');
-        Route::get('/raffles/{raffle}/edit', [RaffleController::class, 'edit'])->name('admin.raffles.edit');
-        Route::get('/raffles/{raffle}/registrations', [RaffleController::class, 'registrations'])->name('admin.raffles.registrations.index');
-        Route::post('/raffles/{raffle}/registrations/{registration}/flag', [RaffleController::class, 'flagRegistration'])->whereNumber('registration')->name('admin.raffles.registrations.flag');
-        Route::post('/raffles/{raffle}/registrations/{registration}/cancel', [RaffleController::class, 'cancelRegistration'])->whereNumber('registration')->name('admin.raffles.registrations.cancel');
-        Route::post('/raffles/{raffle}/registrations/{registration}/restore', [RaffleController::class, 'restoreRegistration'])->whereNumber('raffle')->whereNumber('registration')->name('admin.raffles.registrations.restore');
-        Route::post('/raffles', [RaffleController::class, 'store'])->name('admin.raffles.store');
-        Route::patch('/raffles/{raffle}', [RaffleController::class, 'update'])->name('admin.raffles.update');
-        Route::post('/raffles/{raffle}/publish', [RaffleController::class, 'publish'])->name('admin.raffles.publish');
-        Route::post('/raffles/{raffle}/participation/open', [RaffleController::class, 'openParticipation'])->name('admin.raffles.participation.open');
-        Route::post('/raffles/{raffle}/participation/close', [RaffleController::class, 'closeParticipation'])->name('admin.raffles.participation.close');
+        $registerAuthenticatedRaffleRoutes();
         Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
     });
 }
