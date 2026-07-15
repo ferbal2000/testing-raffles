@@ -17,8 +17,12 @@ return [
         'registration_count' => '{0} 0 inscripciones|{1} 1 inscripción|[2,*] :count inscripciones',
         'flash' => [
             'publish_success' => 'El sorteo se publicó.',
+            'close_success' => 'El sorteo se cerró.',
             'participation_open_success' => 'La participación del sorteo se abrió.',
             'participation_close_success' => 'La participación del sorteo se cerró.',
+        ],
+        'errors' => [
+            'close_unavailable' => 'Este sorteo ya no se puede cerrar.',
         ],
         'columns' => [
             'id' => 'ID',

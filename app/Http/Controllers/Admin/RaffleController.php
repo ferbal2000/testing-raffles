@@ -97,7 +97,13 @@ final class RaffleController extends Controller
     public function openParticipation(Raffle $raffle): RedirectResponse
     {
         try {
-            $raffle->openParticipation(CarbonImmutable::now());
+            DB::transaction(function () use ($raffle): void {
+                $lockedRaffle = Raffle::query()
+                    ->lockForUpdate()
+                    ->findOrFail($raffle->getKey());
+
+                $lockedRaffle->openParticipation(CarbonImmutable::now());
+            });
         } catch (InvalidRaffleTransition $exception) {
             return redirect()
                 ->route('admin.raffles.index')
@@ -126,8 +132,16 @@ final class RaffleController extends Controller
 
     public function closeParticipation(Request $request, Raffle $raffle): RedirectResponse
     {
+        $admin = $this->adminActor($request);
+
         try {
-            $raffle->closeParticipation(CarbonImmutable::now(), 'admin_closed', $this->adminActor($request));
+            DB::transaction(function () use ($raffle, $admin): void {
+                $lockedRaffle = Raffle::query()
+                    ->lockForUpdate()
+                    ->findOrFail($raffle->getKey());
+
+                $lockedRaffle->closeParticipation(CarbonImmutable::now(), 'admin_closed', $admin);
+            });
         } catch (InvalidRaffleTransition $exception) {
             return redirect()
                 ->route('admin.raffles.index')
@@ -137,6 +151,31 @@ final class RaffleController extends Controller
         return redirect()
             ->route('admin.raffles.index')
             ->with('admin.raffles.participation_close_success', trans('admin-raffles.index.flash.participation_close_success'));
+    }
+
+    public function close(Request $request, Raffle $raffle): RedirectResponse
+    {
+        $admin = $this->adminActor($request);
+
+        try {
+            DB::transaction(function () use ($raffle, $admin): void {
+                $lockedRaffle = Raffle::query()
+                    ->lockForUpdate()
+                    ->findOrFail($raffle->getKey());
+
+                $lockedRaffle->close(CarbonImmutable::now(), 'raffle_closed', $admin);
+            });
+        } catch (InvalidRaffleTransition) {
+            return redirect()
+                ->route('admin.raffles.index')
+                ->withErrors([
+                    'close' => trans('admin-raffles.index.errors.close_unavailable'),
+                ]);
+        }
+
+        return redirect()
+            ->route('admin.raffles.index')
+            ->with('admin.raffles.close_success', trans('admin-raffles.index.flash.close_success'));
     }
 
     public function flagRegistration(Raffle $raffle, int|string $registration): RedirectResponse
