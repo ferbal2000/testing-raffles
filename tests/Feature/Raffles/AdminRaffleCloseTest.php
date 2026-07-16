@@ -192,6 +192,7 @@ it('locks the current raffle row before each competing admin mutation', function
 
     assertDatabaseCount(Raffle::class, 1);
 })->with([
+    'publish' => ['publish', fn () => Raffle::factory()->create(), 'admin.raffles.publish_success'],
     'overall close' => ['close', fn () => Raffle::factory()->published()->openedForParticipation()->create(), 'admin.raffles.close_success'],
     'participation open' => ['participation/open', fn () => Raffle::factory()->published()->create(), 'admin.raffles.participation_open_success'],
     'participation close' => ['participation/close', fn () => Raffle::factory()->published()->openedForParticipation()->create(), 'admin.raffles.participation_close_success'],
