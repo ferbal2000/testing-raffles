@@ -118,7 +118,13 @@ final class RaffleController extends Controller
     public function publish(Raffle $raffle): RedirectResponse
     {
         try {
-            $raffle->publish();
+            DB::transaction(function () use ($raffle): void {
+                $lockedRaffle = Raffle::query()
+                    ->lockForUpdate()
+                    ->findOrFail($raffle->getKey());
+
+                $lockedRaffle->publish();
+            });
         } catch (InvalidRaffleTransition $exception) {
             return redirect()
                 ->route('admin.raffles.index')

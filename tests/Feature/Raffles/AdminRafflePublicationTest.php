@@ -1,8 +1,10 @@
 <?php
 
 use App\Enums\RaffleStatus;
+use App\Http\Controllers\Admin\RaffleController;
 use App\Models\Admin;
 use App\Models\Raffle;
+use App\Models\RaffleRegistration;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -29,6 +31,20 @@ function publicationPublicRaffleHost(): string
 function publicationPublicRaffleUrl(string $path = ''): string
 {
     return rtrim((string) config('app.public_url'), '/').$path;
+}
+
+function publicationBusinessSnapshot(Raffle $raffle): array
+{
+    return [
+        'status' => $raffle->status->value,
+        'starts_at' => $raffle->starts_at?->toISOString(),
+        'ends_at' => $raffle->ends_at?->toISOString(),
+        'participation_opened_at' => $raffle->participation_opened_at?->toISOString(),
+        'participation_closed_at' => $raffle->participation_closed_at?->toISOString(),
+        'participation_closed_reason' => $raffle->participation_closed_reason,
+        'participation_closed_by_admin_id' => $raffle->participation_closed_by_admin_id,
+        'registrations_count' => $raffle->registrations()->count(),
+    ];
 }
 
 it('publishes a draft raffle for an authenticated admin', function () {
@@ -60,6 +76,39 @@ it('rejects stale non-draft publish submissions without changing the raffle stat
         ->assertSessionHasErrors(['publish' => 'Cannot transition raffle from [published] to [published].']);
 
     expect($raffle->fresh()->status)->toBe(RaffleStatus::Published);
+});
+
+it('rejects a stale draft-bound publish after committed closure without changing business data', function () {
+    $requestingAdmin = Admin::factory()->create();
+    $closingAdmin = Admin::factory()->create();
+    $staleRaffle = Raffle::factory()->scheduled(
+        CarbonImmutable::parse('2026-07-01 10:00:00'),
+        CarbonImmutable::parse('2026-07-10 18:00:00'),
+    )->create();
+    $committedRaffle = $staleRaffle->fresh();
+    $committedRaffle->publish();
+    $committedRaffle->openParticipation(CarbonImmutable::parse('2026-07-02 10:00:00'));
+    RaffleRegistration::factory()->count(2)->for($committedRaffle)->create();
+    $committedRaffle->close(
+        CarbonImmutable::parse('2026-07-03 10:00:00'),
+        'raffle_closed',
+        $closingAdmin,
+    );
+    $closedSnapshot = publicationBusinessSnapshot($committedRaffle->fresh());
+
+    $this->actingAs($requestingAdmin, 'admin');
+    $response = app(RaffleController::class)->publish($staleRaffle);
+
+    expect($response->getTargetUrl())->toBe(route('admin.raffles.index'))
+        ->and(publicationBusinessSnapshot($staleRaffle->fresh()))->toBe($closedSnapshot)
+        ->and(session()->has('admin.raffles.publish_success'))->toBeFalse()
+        ->and(session('errors')->get('publish'))->toBe([
+            'Cannot transition raffle from [closed] to [published].',
+        ]);
+
+    $this->withServerVariables(['HTTP_HOST' => publicationPublicRaffleHost()])
+        ->get(publicationPublicRaffleUrl("/raffles/{$staleRaffle->id}"))
+        ->assertNotFound();
 });
 
 it('makes a successfully published raffle publicly resolvable', function () {
