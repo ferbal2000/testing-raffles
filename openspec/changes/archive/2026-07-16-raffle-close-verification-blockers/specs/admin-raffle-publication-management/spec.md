@@ -1,10 +1,6 @@
-# Admin Raffle Publication Management Specification
+# Delta for Admin Raffle Publication Management
 
-## Purpose
-
-Define the admin-only action that publishes draft raffles through the existing raffle lifecycle rule.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Admins publish draft raffles only
 
@@ -47,20 +43,3 @@ The system MUST expose an admin-only publish action for persisted draft raffles.
 - WHEN the recorded statements are inspected
 - THEN a raffle-row `SELECT ... FOR UPDATE` appears before the raffle update
 - AND this ordering is evidence of the command protocol, not proof of simultaneous-session lock waiting
-
-### Requirement: Publishing changes public visibility only
-
-The system SHALL treat successful publication as the existing `draft -> published` lifecycle transition. Publishing MUST NOT open participation, close participation, select winners, create tickets, moderate registrations, or create a reversible published-to-draft workflow.
-
-#### Scenario: Published raffle becomes publicly resolvable
-
-- GIVEN a draft raffle is not publicly resolvable
-- WHEN an authenticated admin successfully publishes it
-- THEN the raffle becomes publicly resolvable under existing published-only visibility rules
-
-#### Scenario: Publishing does not open participation
-
-- GIVEN a draft raffle has null participation open and close timestamps
-- WHEN an authenticated admin successfully publishes it
-- THEN participation timestamps remain unchanged
-- AND participation acceptance is still governed by the existing participation rule
