@@ -29,10 +29,10 @@ Chain strategy: feature-branch-chain
 
 ## Phase 2 — Unit 2: Navigation
 
-- [ ] 2.1 Add frontend/test foundation in `package.json`, generated `package-lock.json`, and `vite.config.js`: Vue 3, Vue plugin/Test Utils, Vitest/jsdom, and `test:js`.
-- [ ] 2.2 **RED** — Create `resources/js/admin/raffle-registrations/RaffleRegistrations.test.js` for real links, push/replace/pop history, late-GET rejection, pagination failure preservation/retry, global lock, range/focus/live semantics ([History](specs/admin-raffle-participation-list/spec.md#scenario-page-history), [Pending](specs/admin-raffle-participation-list/spec.md#scenario-operation-is-pending)).
-- [ ] 2.3 **GREEN** — Create `RaffleRegistrations.vue` and update `resources/js/app.js` for safe initial parsing/mount, canonical snapshot navigation, sequencing, `aria-busy`, disabled screen navigation, focus, and announcements.
-- [ ] 2.4 **REFACTOR** — Extract request/history helpers only when tests justify them; run Unit 2 focused test and runtime harness.
+- [x] 2.1 Add frontend/test foundation in `package.json`, generated `package-lock.json`, and `vite.config.js`: Vue 3, Vue plugin/Test Utils, Vitest/jsdom, and `test:js`.
+- [x] 2.2 **RED** — Create `resources/js/admin/raffle-registrations/RaffleRegistrations.test.js` for real links, push/replace/pop history, late-GET rejection, pagination failure preservation/retry, global lock, range/focus/live semantics ([History](specs/admin-raffle-participation-list/spec.md#scenario-page-history), [Pending](specs/admin-raffle-participation-list/spec.md#scenario-operation-is-pending)).
+- [x] 2.3 **GREEN** — Create `RaffleRegistrations.vue` and update `resources/js/app.js` for safe initial parsing/mount, canonical snapshot navigation, sequencing, `aria-busy`, disabled screen navigation, focus, and announcements.
+- [x] 2.4 **REFACTOR** — Extract request/history helpers only when tests justify them; run Unit 2 focused test and runtime harness.
 
 ## Phase 3 — Unit 3: Actions and Recovery
 
