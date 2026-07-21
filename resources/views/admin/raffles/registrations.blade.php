@@ -1,5 +1,5 @@
 <x-layouts.app>
-    <section class="w-full max-w-3xl self-start space-y-6 rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+    <section id="raffle-registration-app" class="w-full max-w-3xl self-start space-y-6 rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <header class="space-y-2">
                 <h1 class="text-3xl font-semibold">{{ __('admin-raffles.registrations.title', ['id' => $raffle->id]) }}</h1>
@@ -38,15 +38,15 @@
             </div>
         @enderror
 
+        <div role="status" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            {{ $snapshot['copy']['unavailable'] }}
+        </div>
+        <noscript><p>{{ $snapshot['copy']['unavailable'] }}</p></noscript>
+
         <section class="rounded-xl border border-slate-200 bg-slate-50 p-4" aria-labelledby="registration-summary-title">
             <h2 id="registration-summary-title" class="text-sm font-medium text-slate-600">{{ __('admin-raffles.registrations.summary_title') }}</h2>
             <dl class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                @foreach ([
-                    ['active', $raffle->active_registrations_count],
-                    ['flagged', $raffle->flagged_registrations_count],
-                    ['cancelled', $raffle->cancelled_registrations_count],
-                    ['total', $raffle->registrations_count],
-                ] as [$summaryKey, $summaryCount])
+                @foreach ($snapshot['counts'] as $summaryKey => $summaryCount)
                     <div class="rounded-lg bg-white p-3 ring-1 ring-slate-200">
                         <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __("admin-raffles.registrations.summary.{$summaryKey}_label") }}</dt>
                         <dd class="mt-1 text-lg font-semibold text-slate-950">
@@ -57,7 +57,7 @@
             </dl>
         </section>
 
-        @if ($raffle->registrations->isEmpty())
+        @if ($snapshot['rows'] === [])
             <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6">
                 <p class="text-lg font-medium text-slate-900">{{ __('admin-raffles.registrations.empty.title') }}</p>
                 <p class="mt-2 text-sm text-slate-600">{{ __('admin-raffles.registrations.empty.description') }}</p>
@@ -76,64 +76,16 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 bg-white text-slate-900">
-                        @foreach ($raffle->registrations as $registration)
-                            @php($linkedAccountLabel = $registration->user_id !== null
-                                ? __('admin-raffles.registrations.linked_account.yes')
-                                : __('admin-raffles.registrations.linked_account.no'))
-                            @php($statusLabel = __('admin-raffles.registrations.status.'.$registration->status->value))
-
+                        @foreach ($snapshot['rows'] as $registration)
                             <tr>
-                                <td class="px-4 py-3">{{ $registration->name }}</td>
-                                <td class="px-4 py-3">{{ $registration->email }}</td>
+                                <td class="px-4 py-3">{{ $registration['name'] }}</td>
+                                <td class="px-4 py-3">{{ $registration['email'] }}</td>
                                 <td class="px-4 py-3">
-                                    <span class="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{{ $statusLabel }}</span>
+                                    <span class="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{{ $registration['status']['label'] }}</span>
                                 </td>
-                                <td class="px-4 py-3">{{ $registration->created_at?->format('Y-m-d H:i') }}</td>
-                                <td class="px-4 py-3">{{ $linkedAccountLabel }}</td>
-                                <td class="px-4 py-3">
-                                    @if ($registration->canBeFlagged() || $registration->canBeCancelled() || $registration->canBeRestored())
-                                        <div class="flex flex-wrap gap-2">
-                                            @if ($registration->canBeFlagged())
-                                                <form method="POST" action="{{ route('admin.raffles.registrations.flag', [$raffle, $registration]) }}">
-                                                    @csrf
-                                                    <button
-                                                        type="submit"
-                                                        class="rounded-lg border border-amber-300 px-2 py-1 text-xs font-medium text-amber-800 transition hover:bg-amber-50"
-                                                        onclick="return confirm('{{ __('admin-raffles.registrations.actions.flag_confirm') }}')"
-                                                    >
-                                                        {{ __('admin-raffles.registrations.actions.flag') }}
-                                                    </button>
-                                                </form>
-                                            @endif
-                                            @if ($registration->canBeCancelled())
-                                                <form method="POST" action="{{ route('admin.raffles.registrations.cancel', [$raffle, $registration]) }}">
-                                                    @csrf
-                                                    <button
-                                                        type="submit"
-                                                        class="rounded-lg border border-red-300 px-2 py-1 text-xs font-medium text-red-800 transition hover:bg-red-50"
-                                                        onclick="return confirm('{{ __('admin-raffles.registrations.actions.cancel_confirm') }}')"
-                                                    >
-                                                        {{ __('admin-raffles.registrations.actions.cancel') }}
-                                                    </button>
-                                                </form>
-                                            @endif
-                                            @if ($registration->canBeRestored())
-                                                <form method="POST" action="{{ route('admin.raffles.registrations.restore', [$raffle, $registration]) }}">
-                                                    @csrf
-                                                    <button
-                                                        type="submit"
-                                                        class="rounded-lg border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50"
-                                                        onclick="return confirm('{{ __('admin-raffles.registrations.actions.restore_confirm') }}')"
-                                                    >
-                                                        {{ __('admin-raffles.registrations.actions.restore') }}
-                                                    </button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    @else
-                                        <span class="text-sm text-slate-500">{{ __('admin-raffles.registrations.actions.none_available') }}</span>
-                                    @endif
-                                </td>
+                                <td class="px-4 py-3">{{ $registration['created_at'] }}</td>
+                                <td class="px-4 py-3">{{ $registration['linked_account']['label'] }}</td>
+                                <td class="px-4 py-3"><span class="text-sm text-slate-500">{{ __('admin-raffles.registrations.actions.read_only') }}</span></td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -141,4 +93,6 @@
             </div>
         @endif
     </section>
+
+    <script id="raffle-registration-snapshot" type="application/json">{!! Js::encode($snapshot) !!}</script>
 </x-layouts.app>

@@ -101,10 +101,15 @@ return [
             'flag' => 'Marcar para revisión',
             'flag_confirm' => '¿Marcar esta inscripción para revisión?',
             'cancel' => 'Cancelar inscripción',
-            'cancel_confirm' => '¿Cancelar esta inscripción?',
+            'cancel_confirm' => '¿Cancelar esta inscripción? La cancelación es definitiva y no se puede restaurar.',
             'restore' => 'Quitar de revisión',
             'restore_confirm' => '¿Quitar esta inscripción de revisión y restaurarla a activa?',
             'none_available' => 'Sin acciones disponibles',
+            'read_only' => 'Acciones no disponibles',
+        ],
+        'interaction' => [
+            'busy' => 'Procesando. Esperá un momento.',
+            'unavailable' => 'La paginación y las acciones no están disponibles en este momento.',
         ],
         'flash' => [
             'flag_success' => 'La inscripción se marcó para revisión.',

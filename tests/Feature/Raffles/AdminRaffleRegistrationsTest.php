@@ -32,6 +32,155 @@ it('returns 401 for unauthenticated json raffle registration list requests', fun
         ->assertUnauthorized();
 });
 
+it('paginates 26 registrations into newest-first non-overlapping pages with whole-raffle counts', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    foreach (range(1, 26) as $number) {
+        persistedRaffleRegistration($raffle, [
+            'name' => "Guest {$number}",
+            'status' => match ($number % 3) {
+                0 => RaffleRegistrationStatus::Flagged,
+                1 => RaffleRegistrationStatus::Active,
+                default => RaffleRegistrationStatus::Cancelled,
+            },
+        ]);
+    }
+    $firstPage = $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->getJson(adminRaffleUrl("/raffles/{$raffle->id}/registrations?page=1"))
+        ->assertOk()
+        ->assertJsonCount(25, 'snapshot.rows')
+        ->assertJsonPath('snapshot.rows.0.name', 'Guest 26')
+        ->assertJsonPath('snapshot.rows.24.name', 'Guest 2')
+        ->assertJsonPath('snapshot.rows.1.status.value', 'active')
+        ->assertJsonPath('snapshot.rows.1.actions.0.kind', 'flag')
+        ->assertJsonPath('snapshot.counts', ['active' => 9, 'flagged' => 8, 'cancelled' => 9, 'total' => 26])
+        ->assertJsonPath('snapshot.pagination.last_page', 2)
+        ->assertJsonPath('snapshot.copy.login_url', route('admin.login'))
+        ->assertJsonPath('feedback', null)
+        ->json('snapshot.rows');
+    $secondPage = $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->getJson(adminRaffleUrl("/raffles/{$raffle->id}/registrations?page=2"))
+        ->assertOk()
+        ->assertJsonCount(1, 'snapshot.rows')
+        ->assertJsonPath('snapshot.rows.0.name', 'Guest 1')
+        ->assertJsonPath('snapshot.counts.total', 26)
+        ->assertJsonPath('snapshot.pagination.from', 26)
+        ->assertJsonPath('snapshot.pagination.to', 26)
+        ->json('snapshot.rows');
+
+    expect(array_intersect(array_column($firstPage, 'id'), array_column($secondPage, 'id')))->toBeEmpty();
+});
+
+it('serves the Unit 1 runtime harness as a canonical read-only 25-row html page', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    RaffleRegistration::factory()->count(50)->create(['raffle_id' => $raffle->id]);
+    $response = $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(adminRaffleUrl("/raffles/{$raffle->id}/registrations?page=2"))
+        ->assertOk()
+        ->assertDontSee('<form', escape: false)
+        ->assertDontSee('<button', escape: false);
+
+    expect($response->viewData('snapshot')['rows'])->toHaveCount(25)
+        ->and($response->viewData('snapshot')['pagination']['current_page'])->toBe(2)
+        ->and($response->viewData('snapshot')['pagination']['canonical_url'])->toBe(
+            route('admin.raffles.registrations.index', ['raffle' => $raffle, 'page' => 2]),
+        );
+});
+
+it('canonicalizes noncanonical html and json pages without presenting a populated raffle as empty', function (string $page, int $expectedPage, string $expectedName) {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    foreach (range(1, 26) as $number) {
+        persistedRaffleRegistration($raffle, ['name' => "Canonical Guest {$number}"]);
+    }
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(adminRaffleUrl("/raffles/{$raffle->id}/registrations?page={$page}"))
+        ->assertRedirect(route('admin.raffles.registrations.index', ['raffle' => $raffle, 'page' => $expectedPage]));
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->getJson(adminRaffleUrl("/raffles/{$raffle->id}/registrations?page={$page}"))
+        ->assertOk()
+        ->assertJsonPath('snapshot.pagination.current_page', $expectedPage)
+        ->assertJsonPath('snapshot.rows.0.name', $expectedName);
+})->with([
+    'malformed' => ['nope', 1, 'Canonical Guest 26'],
+    'zero' => ['0', 1, 'Canonical Guest 26'],
+    'negative' => ['-2', 1, 'Canonical Guest 26'],
+    'above last page' => ['99', 2, 'Canonical Guest 1'],
+]);
+
+it('returns 419 for an authenticated json mutation without a csrf token', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle);
+    $this->app->detectEnvironment(fn (): string => 'production');
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->postJson(route('admin.raffles.registrations.flag', [$raffle, $registration]))
+        ->assertStatus(419)
+        ->assertJsonMissingPath('snapshot');
+});
+
+it('returns fresh snapshots for negotiated 200 success and 409 stale mutation responses', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle);
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->postJson(route('admin.raffles.registrations.flag', [$raffle, $registration, 'page' => 1]))
+        ->assertOk()
+        ->assertJsonPath('snapshot.rows.0.status.value', 'flagged')
+        ->assertJsonPath('snapshot.counts', ['active' => 0, 'flagged' => 1, 'cancelled' => 0, 'total' => 1])
+        ->assertJsonPath('feedback.level', 'success')
+        ->assertJsonPath('feedback.code', 'flag_success');
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->postJson(route('admin.raffles.registrations.flag', [$raffle, $registration]))
+        ->assertConflict()
+        ->assertJsonPath('snapshot.rows.0.status.value', 'flagged')
+        ->assertJsonPath('snapshot.counts.flagged', 1)
+        ->assertJsonPath('feedback.level', 'error')
+        ->assertJsonPath('feedback.code', 'status_unavailable');
+});
+
+it('returns a safe json server error without a misleading snapshot when persistence fails', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle);
+    RaffleRegistration::saving(fn () => throw new RuntimeException('simulated persistence failure'));
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->postJson(route('admin.raffles.registrations.flag', [$raffle, $registration]))
+        ->assertServerError()
+        ->assertJsonMissingPath('snapshot');
+
+    expect($registration->fresh()->status)->toBe(RaffleRegistrationStatus::Active);
+});
+
+it('renders an xss-safe initial snapshot and a read-only unavailable boundary', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    persistedRaffleRegistration($raffle, ['name' => '</script><script>alert("unsafe")</script>']);
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(adminRaffleUrl("/raffles/{$raffle->id}/registrations"))
+        ->assertOk()
+        ->assertSee('id="raffle-registration-snapshot" type="application/json"', escape: false)
+        ->assertSeeText('La paginación y las acciones no están disponibles en este momento.')
+        ->assertSee('\\u003C\\/script\\u003E', escape: false)
+        ->assertDontSee('</script><script>alert', escape: false)
+        ->assertDontSee('<form', escape: false)
+        ->assertDontSee('<button', escape: false);
+});
+
 it('shows an explicit empty state for authenticated admins when a raffle has no registrations', function () {
     $admin = Admin::factory()->create();
     $raffle = Raffle::factory()->create();
@@ -118,8 +267,8 @@ it('shows existing registrations newest-first with allowed fields and read-only 
         ->assertDontSeeText('Ganador')
         ->assertDontSeeText('Aprobar')
         ->assertDontSeeText('Rechazar')
-        ->assertSeeText('Cancelar inscripción')
-        ->assertSeeText('Marcar para revisión')
+        ->assertDontSee('<form', escape: false)
+        ->assertDontSee('<button', escape: false)
         ->assertDontSeeText('Exportar')
         ->assertDontSeeText('Eliminar')
         ->assertDontSeeText('Editar')
@@ -187,8 +336,6 @@ it('shows status-specific actions, separated totals, and registrations newest-fi
         'status' => RaffleRegistrationStatus::Active,
     ]);
 
-    $restoreUrl = route('admin.raffles.registrations.restore', [$raffle, $registrations['flagged']]);
-
     $response = $this->actingAs($admin, 'admin')
         ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
         ->get(adminRaffleUrl("/raffles/{$raffle->id}/registrations"));
@@ -208,35 +355,30 @@ it('shows status-specific actions, separated totals, and registrations newest-fi
             'Cancelled Guest',
             'cancelled@example.com',
             'Cancelada',
-            'Sin acciones disponibles',
+            'Acciones no disponibles',
             'Flagged Guest',
             'flagged@example.com',
             'Para revisión',
-            'Quitar de revisión',
+            'Acciones no disponibles',
             'Active Guest',
             'active@example.com',
             'Activa',
-            'Marcar para revisión',
-            'Cancelar inscripción',
+            'Acciones no disponibles',
         ], escape: false)
-        ->assertSee(route('admin.raffles.registrations.flag', [$raffle, $registrations['active']]), escape: false)
-        ->assertSee(route('admin.raffles.registrations.cancel', [$raffle, $registrations['active']]), escape: false)
-        ->assertDontSee(route('admin.raffles.registrations.restore', [$raffle, $registrations['active']]), escape: false)
-        ->assertDontSee(route('admin.raffles.registrations.flag', [$raffle, $registrations['flagged']]), escape: false)
-        ->assertDontSee(route('admin.raffles.registrations.cancel', [$raffle, $registrations['flagged']]), escape: false)
-        ->assertSee($restoreUrl, escape: false)
-        ->assertDontSee(route('admin.raffles.registrations.flag', [$raffle, $registrations['cancelled']]), escape: false)
-        ->assertDontSee(route('admin.raffles.registrations.cancel', [$raffle, $registrations['cancelled']]), escape: false)
-        ->assertDontSee(route('admin.raffles.registrations.restore', [$raffle, $registrations['cancelled']]), escape: false)
+        ->assertSeeText('Quitar de revisión')
+        ->assertSeeText('Marcar para revisión')
+        ->assertSeeText('Cancelar inscripción')
         ->assertSee('¿Quitar esta inscripción de revisión y restaurarla a activa?')
-        ->assertSee('<input type="hidden" name="_token" value="'.csrf_token().'" autocomplete="off">', escape: false)
+        ->assertDontSee('<form', escape: false)
+        ->assertDontSee('<button', escape: false)
+        ->assertSee('<meta name="csrf-token" content="'.csrf_token().'">', escape: false)
         ->assertDontSeeText('Aprobar')
         ->assertDontSeeText('Rechazar')
         ->assertDontSeeText('Reactivar')
         ->assertDontSeeText('Ticket')
         ->assertDontSeeText('Pago');
 
-    expect(substr_count($response->getContent(), $restoreUrl))->toBe(1);
+    expect(substr_count($response->getContent(), '"kind":"restore"'))->toBe(1);
 });
 
 it('shows scoped review-cleared success feedback on the registrations page', function () {
@@ -275,10 +417,9 @@ it('renders every status action boundary and restores a flagged row through the 
         ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
         ->get($indexUrl)
         ->assertOk()
-        ->assertSee(route('admin.raffles.registrations.flag', [$raffle, $activeRegistration]), escape: false)
-        ->assertSee(route('admin.raffles.registrations.cancel', [$raffle, $activeRegistration]), escape: false)
-        ->assertSee($restoreUrl, escape: false)
-        ->assertDontSee(route('admin.raffles.registrations.restore', [$raffle, $cancelledRegistration]), escape: false);
+        ->assertSeeText('Acciones no disponibles')
+        ->assertDontSee('<form', escape: false)
+        ->assertDontSee('<button', escape: false);
 
     $this->actingAs($admin, 'admin')
         ->followingRedirects()
@@ -288,9 +429,8 @@ it('renders every status action boundary and restores a flagged row through the 
         ->assertSeeText('La inscripción se quitó de revisión y se restauró a activa.')
         ->assertSeeText('2 activas')
         ->assertSeeText('0 para revisión')
-        ->assertSee(route('admin.raffles.registrations.flag', [$raffle, $flaggedRegistration]), escape: false)
-        ->assertSee(route('admin.raffles.registrations.cancel', [$raffle, $flaggedRegistration]), escape: false)
-        ->assertDontSee($restoreUrl, escape: false);
+        ->assertDontSee('<form', escape: false)
+        ->assertDontSee('<button', escape: false);
 
     expect($flaggedRegistration->fresh()->status)->toBe(RaffleRegistrationStatus::Active)
         ->and($cancelledRegistration->fresh()->status)->toBe(RaffleRegistrationStatus::Cancelled);
@@ -381,8 +521,9 @@ it('does not mutate a registration through another raffles nested status action 
 
     $this->actingAs($admin, 'admin')
         ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
-        ->post(route("admin.raffles.registrations.{$action}", [$raffle, $registration]))
-        ->assertNotFound();
+        ->postJson(route("admin.raffles.registrations.{$action}", [$raffle, $registration]))
+        ->assertNotFound()
+        ->assertJsonMissingPath('snapshot');
 
     assertDatabaseHas(RaffleRegistration::class, [
         'id' => $registration->id,
