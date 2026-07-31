@@ -2,7 +2,7 @@
     <section class="w-full max-w-3xl self-start space-y-6 rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <header class="space-y-2">
-                <h1 class="text-3xl font-semibold">{{ __('admin-raffles.registrations.title', ['id' => $raffle->id]) }}</h1>
+                <h1 id="raffle-registration-heading" tabindex="-1" class="text-3xl font-semibold">{{ __('admin-raffles.registrations.title', ['id' => $raffle->id]) }}</h1>
                 <p class="text-slate-600">{{ __('admin-raffles.registrations.description') }}</p>
             </header>
 
@@ -38,6 +38,7 @@
             </div>
         @enderror
 
+        <div id="raffle-registration-list" data-raffle-id="{{ $raffle->id }}" data-csrf="{{ csrf_token() }}">
         <section class="rounded-xl border border-slate-200 bg-slate-50 p-4" aria-labelledby="registration-summary-title">
             <h2 id="registration-summary-title" class="text-sm font-medium text-slate-600">{{ __('admin-raffles.registrations.summary_title') }}</h2>
             <dl class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -124,6 +125,7 @@
                 @endforeach
             </nav>
         @endif
+        </div>
 
         <script id="raffle-registration-snapshot" type="application/json">{!! Illuminate\Support\Js::encode($snapshot) !!}</script>
     </section>

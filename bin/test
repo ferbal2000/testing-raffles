@@ -2,6 +2,22 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [[ "${1:-}" == "--js" ]]; then
+  shift
+  args=()
+  while (($#)); do
+    case "$1" in
+      --grep=*) args+=("-t" "${1#*=}") ;;
+      --grep) shift; args+=("-t" "${1:?--grep requires a pattern}") ;;
+      *) args+=("$1") ;;
+    esac
+    shift
+  done
+  cd "$ROOT_DIR"
+  exec npm run test:js -- "${args[@]}"
+fi
+
 TEST_DB_CONNECTION="pgsql"
 TEST_DB_HOST="${DB_TEST_HOST:-db}"
 TEST_DB_PORT="${DB_TEST_PORT:-5432}"

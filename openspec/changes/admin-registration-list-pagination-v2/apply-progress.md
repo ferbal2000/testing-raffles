@@ -2,8 +2,8 @@
 
 ## State
 - Mode: Strict TDD; skill resolution: `sdd-apply: fallback-path`; project skills: `paths-injected`.
-- Completed: 1.1, 1.2, 1.3, 1.4, 1.5. Remaining: 2.1–2.4, 3.1–3.5.
-- Work unit: `unit1-server-fallback`; branch: `feat/admin-registration-list-pagination-v2-server`; base: `feat/admin-registration-list-pagination-v2`.
+- Completed: 1.1–1.5, 2.1–2.4. Remaining: 3.1–3.5.
+- Work unit: `unit2-hydration-navigation`; branch: `feat/admin-registration-list-pagination-v2-navigation`; base: `feat/admin-registration-list-pagination-v2-server` at `4768fa8a`.
 
 ## TDD Cycle Evidence
 | Task | Test/layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
@@ -28,3 +28,19 @@
 ## Final normalization evidence
 - Pint: mutation fixed 1 `ordered_imports` issue in `RaffleController.php`; check-only PASS, 4 files.
 - Tests: focused PASS, 24 tests/105 assertions/0.94s; full PASS, 60 tests/301 assertions/1.65s.
+
+## Unit 2 TDD Cycle Evidence
+| Task | RED | GREEN | TRIANGULATE / REFACTOR |
+|---|---|---|---|
+| 2.1 | Focused suite failed: missing `RaffleRegistrations.vue` | 8/8 pass | Complete/invalid schemas and defensive mount; final 8/8 |
+| 2.2 | Deferred race/history/expiry tests authored before production | 8/8 pass after two focused corrections | Click/popstate permutations, malformed payload, 401/419; final 8/8 |
+| 2.3 | New modules absent in RED | Validated mount and atomic navigation pass | Pure validator plus component integration; final 8/8 |
+| 2.4 | Guard behavior covered before implementation | Central `active`, `expire`, and `navigate` transitions pass | Cleanup/unmount isolation; final 8/8 |
+
+## Unit 2 Work Unit Evidence
+| Evidence | Exact result |
+|---|---|
+| Focused/runtime | `bin/test --js --grep='hydration|navigation'` → PASS, 1 file, 8 tests; jsdom exercised click/popstate deferred races |
+| Full JS/build | `bin/test --js` → PASS, 1 file, 8 tests; `npm run build -- --outDir /tmp/opencode/raffles-build-unit2 --emptyOutDir` → PASS, 10 modules |
+| PHP fallback | Focused fallback/XSS command → PASS, 2 tests, 12 assertions |
+| Rollback boundary | Revert Unit 2 JS/tooling, resource copy, Blade mount wrapper, and Unit 2 task/progress marks; Unit 1 server fallback remains intact. |
