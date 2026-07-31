@@ -46,26 +46,9 @@ final class RaffleController extends Controller
         $rawPage = $request->query('page');
         $validPage = is_string($rawPage) && preg_match('/^[1-9][0-9]*$/', $rawPage) === 1;
         $requestedPage = $validPage ? (int) $rawPage : 1;
-        $query = $raffle->registrations()
-            ->select(['id', 'raffle_id', 'user_id', 'name', 'email', 'status', 'created_at'])
-            ->latest('id');
-        $registrations = $query->paginate(RaffleRegistrationSnapshot::PER_PAGE, ['*'], 'page', $requestedPage);
-
-        if ($requestedPage > $registrations->lastPage()) {
-            $registrations = $query->paginate(RaffleRegistrationSnapshot::PER_PAGE, ['*'], 'page', $registrations->lastPage());
-        }
-
-        $raffle->loadCount([
-            'registrations',
-            'registrations as active_registrations_count' => fn ($query) => $query
-                ->where('status', RaffleRegistrationStatus::Active),
-            'registrations as flagged_registrations_count' => fn ($query) => $query
-                ->where('status', RaffleRegistrationStatus::Flagged),
-            'registrations as cancelled_registrations_count' => fn ($query) => $query
-                ->where('status', RaffleRegistrationStatus::Cancelled),
-        ]);
-        $snapshot = RaffleRegistrationSnapshot::make($raffle, $registrations);
-        $canonicalQuery = $registrations->currentPage() === 1 ? [] : ['page' => (string) $registrations->currentPage()];
+        $snapshot = $this->registrationSnapshot($raffle, $requestedPage);
+        $currentPage = $snapshot['pagination']['current'];
+        $canonicalQuery = $currentPage === 1 ? [] : ['page' => (string) $currentPage];
 
         if ($request->expectsJson()) {
             return response()->json($snapshot);
@@ -205,7 +188,7 @@ final class RaffleController extends Controller
             ->with('admin.raffles.close_success', trans('admin-raffles.index.flash.close_success'));
     }
 
-    public function flagRegistration(Request $request, Raffle $raffle, RaffleRegistration $registration): RedirectResponse
+    public function flagRegistration(Request $request, Raffle $raffle, RaffleRegistration $registration): RedirectResponse|JsonResponse
     {
         return $this->transitionRegistration(
             $raffle,
@@ -213,11 +196,11 @@ final class RaffleController extends Controller
             fn (RaffleRegistration $registration): null => $registration->markForReview(),
             'admin.raffles.registration_status_flag_success',
             trans('admin-raffles.registrations.flash.flag_success'),
-            $request->input('page'),
+            $request,
         );
     }
 
-    public function cancelRegistration(Request $request, Raffle $raffle, RaffleRegistration $registration): RedirectResponse
+    public function cancelRegistration(Request $request, Raffle $raffle, RaffleRegistration $registration): RedirectResponse|JsonResponse
     {
         return $this->transitionRegistration(
             $raffle,
@@ -225,11 +208,11 @@ final class RaffleController extends Controller
             fn (RaffleRegistration $registration): null => $registration->cancel(),
             'admin.raffles.registration_status_cancel_success',
             trans('admin-raffles.registrations.flash.cancel_success'),
-            $request->input('page'),
+            $request,
         );
     }
 
-    public function restoreRegistration(Request $request, Raffle $raffle, RaffleRegistration $registration): RedirectResponse
+    public function restoreRegistration(Request $request, Raffle $raffle, RaffleRegistration $registration): RedirectResponse|JsonResponse
     {
         return $this->transitionRegistration(
             $raffle,
@@ -237,7 +220,7 @@ final class RaffleController extends Controller
             fn (RaffleRegistration $registration): null => $registration->restoreToActive(),
             'admin.raffles.registration_status_restore_success',
             trans('admin-raffles.registrations.flash.restore_success'),
-            $request->input('page'),
+            $request,
         );
     }
 
@@ -256,8 +239,15 @@ final class RaffleController extends Controller
         callable $transition,
         string $flashKey,
         string $flashMessage,
-        mixed $page,
-    ): RedirectResponse {
+        Request $request,
+    ): RedirectResponse|JsonResponse {
+        $page = $request->input('page');
+        $validPage = (is_int($page) && $page > 0)
+            || (is_string($page) && preg_match('/^[1-9][0-9]*$/', $page) === 1);
+        if ($request->expectsJson() && ! $validPage) {
+            return response()->json(['errors' => ['page' => ['The page must be a positive integer.']]], 422);
+        }
+
         try {
             DB::transaction(function () use ($raffle, $registrationId, $transition): void {
                 $registration = $raffle->registrations()
@@ -269,11 +259,25 @@ final class RaffleController extends Controller
                 $registration->save();
             });
         } catch (InvalidRaffleRegistrationTransition) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'snapshot' => $this->registrationSnapshot($raffle, $page),
+                    'feedback' => trans('admin-raffles.registrations.errors.status_unavailable'),
+                ], 409);
+            }
+
             return redirect()
                 ->to($this->registrationIndexUrl($raffle, $page))
                 ->withErrors([
                     'registration_status' => trans('admin-raffles.registrations.errors.status_unavailable'),
                 ]);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'snapshot' => $this->registrationSnapshot($raffle, $page),
+                'feedback' => $flashMessage,
+            ]);
         }
 
         return redirect()
@@ -289,5 +293,23 @@ final class RaffleController extends Controller
         $page = $validPage ? min((int) $page, $lastPage) : 1;
 
         return route('admin.raffles.registrations.index', $page === 1 ? [$raffle] : [$raffle, 'page' => $page]);
+    }
+
+    /** @return array<string, mixed> */
+    private function registrationSnapshot(Raffle $raffle, mixed $page): array
+    {
+        $lastPage = max(1, (int) ceil($raffle->registrations()->count() / RaffleRegistrationSnapshot::PER_PAGE));
+        $page = min(max((int) $page, 1), $lastPage);
+        $registrations = $raffle->registrations()
+            ->select(['id', 'raffle_id', 'user_id', 'name', 'email', 'status', 'created_at'])
+            ->latest('id')->paginate(RaffleRegistrationSnapshot::PER_PAGE, ['*'], 'page', $page);
+        $raffle->loadCount([
+            'registrations',
+            'registrations as active_registrations_count' => fn ($query) => $query->where('status', RaffleRegistrationStatus::Active),
+            'registrations as flagged_registrations_count' => fn ($query) => $query->where('status', RaffleRegistrationStatus::Flagged),
+            'registrations as cancelled_registrations_count' => fn ($query) => $query->where('status', RaffleRegistrationStatus::Cancelled),
+        ]);
+
+        return RaffleRegistrationSnapshot::make($raffle, $registrations);
     }
 }

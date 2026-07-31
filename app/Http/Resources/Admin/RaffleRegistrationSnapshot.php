@@ -51,6 +51,13 @@ final class RaffleRegistrationSnapshot
             'copy' => [
                 'paginationLabel' => trans('admin-raffles.registrations.pagination.label'),
                 'page' => trans('admin-raffles.registrations.pagination.page'),
+                'navigationError' => trans('admin-raffles.registrations.pagination.navigation_error'),
+                'mutationError' => trans('admin-raffles.registrations.pagination.mutation_error'),
+                'reconciliationError' => trans('admin-raffles.registrations.pagination.reconciliation_error'),
+                'retryLabel' => trans('admin-raffles.registrations.pagination.retry'),
+                'sessionExpired' => trans('admin-raffles.registrations.pagination.session_expired'),
+                'loginLabel' => trans('admin-raffles.registrations.pagination.login'),
+                'summary' => collect(['active', 'flagged', 'cancelled', 'total'])->mapWithKeys(fn (string $key): array => [$key => trans("admin-raffles.registrations.summary.{$key}_label")])->all(),
             ],
         ];
     }
