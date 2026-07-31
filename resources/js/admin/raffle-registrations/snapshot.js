@@ -30,7 +30,7 @@ export function validateSnapshot(value, raffleId) {
         || !pagination.links.every(link => link && integer(link.page) && link.page > 0
             && link.page <= pagination.last && url(link.url) && typeof link.current === 'boolean')) return null;
     if (!url(value.loginUrl) || !copy
-        || !['paginationLabel', 'page', 'navigationError', 'sessionExpired', 'loginLabel'].every(key => text(copy[key]))
+        || !['paginationLabel', 'page', 'navigationError', 'mutationError', 'reconciliationError', 'retryLabel', 'sessionExpired', 'loginLabel'].every(key => text(copy[key]))
         || !copy.summary || !['active', 'flagged', 'cancelled', 'total'].every(key => text(copy.summary[key]))) return null;
     return value;
 }
