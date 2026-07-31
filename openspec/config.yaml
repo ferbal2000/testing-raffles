@@ -41,14 +41,14 @@ testing:
 
 rules:
   proposal:
-    - Keep scope explicit because the project has no established codebase yet.
+    - Keep scope explicit and identify affected existing capabilities and boundaries.
   specs:
     - Use Given/When/Then for scenarios.
     - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY).
   design:
-    - Document foundational architecture decisions before implementation.
+    - Document architecture decisions and compatibility impacts before implementation.
   tasks:
-    - Keep tasks small and sequenced for greenfield setup.
+    - Keep tasks small, sequenced, and aligned with existing conventions and regression coverage.
   apply:
     - Follow RED-GREEN-REFACTOR through the repository wrappers.
     tdd: true
