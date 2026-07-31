@@ -42,10 +42,10 @@
             <h2 id="registration-summary-title" class="text-sm font-medium text-slate-600">{{ __('admin-raffles.registrations.summary_title') }}</h2>
             <dl class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 @foreach ([
-                    ['active', $raffle->active_registrations_count],
-                    ['flagged', $raffle->flagged_registrations_count],
-                    ['cancelled', $raffle->cancelled_registrations_count],
-                    ['total', $raffle->registrations_count],
+                    ['active', $snapshot['counts']['active']],
+                    ['flagged', $snapshot['counts']['flagged']],
+                    ['cancelled', $snapshot['counts']['cancelled']],
+                    ['total', $snapshot['counts']['total']],
                 ] as [$summaryKey, $summaryCount])
                     <div class="rounded-lg bg-white p-3 ring-1 ring-slate-200">
                         <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __("admin-raffles.registrations.summary.{$summaryKey}_label") }}</dt>
@@ -57,7 +57,7 @@
             </dl>
         </section>
 
-        @if ($raffle->registrations->isEmpty())
+        @if ($snapshot['rows'] === [])
             <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6">
                 <p class="text-lg font-medium text-slate-900">{{ __('admin-raffles.registrations.empty.title') }}</p>
                 <p class="mt-2 text-sm text-slate-600">{{ __('admin-raffles.registrations.empty.description') }}</p>
@@ -76,59 +76,31 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 bg-white text-slate-900">
-                        @foreach ($raffle->registrations as $registration)
-                            @php($linkedAccountLabel = $registration->user_id !== null
-                                ? __('admin-raffles.registrations.linked_account.yes')
-                                : __('admin-raffles.registrations.linked_account.no'))
-                            @php($statusLabel = __('admin-raffles.registrations.status.'.$registration->status->value))
-
+                        @foreach ($snapshot['rows'] as $registration)
                             <tr>
-                                <td class="px-4 py-3">{{ $registration->name }}</td>
-                                <td class="px-4 py-3">{{ $registration->email }}</td>
+                                <td class="px-4 py-3">{{ $registration['name'] }}</td>
+                                <td class="px-4 py-3">{{ $registration['email'] }}</td>
                                 <td class="px-4 py-3">
-                                    <span class="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{{ $statusLabel }}</span>
+                                    <span class="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{{ $registration['statusLabel'] }}</span>
                                 </td>
-                                <td class="px-4 py-3">{{ $registration->created_at?->format('Y-m-d H:i') }}</td>
-                                <td class="px-4 py-3">{{ $linkedAccountLabel }}</td>
+                                <td class="px-4 py-3">{{ $registration['createdAt'] }}</td>
+                                <td class="px-4 py-3">{{ $registration['linkedAccountLabel'] }}</td>
                                 <td class="px-4 py-3">
-                                    @if ($registration->canBeFlagged() || $registration->canBeCancelled() || $registration->canBeRestored())
+                                    @if ($registration['actions'] !== [])
                                         <div class="flex flex-wrap gap-2">
-                                            @if ($registration->canBeFlagged())
-                                                <form method="POST" action="{{ route('admin.raffles.registrations.flag', [$raffle, $registration]) }}">
+                                            @foreach ($registration['actions'] as $action)
+                                                <form method="POST" action="{{ $action['url'] }}">
                                                     @csrf
+                                                    <input type="hidden" name="page" value="{{ $snapshot['pagination']['current'] }}">
                                                     <button
                                                         type="submit"
-                                                        class="rounded-lg border border-amber-300 px-2 py-1 text-xs font-medium text-amber-800 transition hover:bg-amber-50"
-                                                        onclick="return confirm('{{ __('admin-raffles.registrations.actions.flag_confirm') }}')"
+                                                        class="rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium text-slate-800 transition hover:bg-slate-50"
+                                                        onclick="return confirm('{{ $action['confirm'] }}')"
                                                     >
-                                                        {{ __('admin-raffles.registrations.actions.flag') }}
+                                                        {{ $action['label'] }}
                                                     </button>
                                                 </form>
-                                            @endif
-                                            @if ($registration->canBeCancelled())
-                                                <form method="POST" action="{{ route('admin.raffles.registrations.cancel', [$raffle, $registration]) }}">
-                                                    @csrf
-                                                    <button
-                                                        type="submit"
-                                                        class="rounded-lg border border-red-300 px-2 py-1 text-xs font-medium text-red-800 transition hover:bg-red-50"
-                                                        onclick="return confirm('{{ __('admin-raffles.registrations.actions.cancel_confirm') }}')"
-                                                    >
-                                                        {{ __('admin-raffles.registrations.actions.cancel') }}
-                                                    </button>
-                                                </form>
-                                            @endif
-                                            @if ($registration->canBeRestored())
-                                                <form method="POST" action="{{ route('admin.raffles.registrations.restore', [$raffle, $registration]) }}">
-                                                    @csrf
-                                                    <button
-                                                        type="submit"
-                                                        class="rounded-lg border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50"
-                                                        onclick="return confirm('{{ __('admin-raffles.registrations.actions.restore_confirm') }}')"
-                                                    >
-                                                        {{ __('admin-raffles.registrations.actions.restore') }}
-                                                    </button>
-                                                </form>
-                                            @endif
+                                            @endforeach
                                         </div>
                                     @else
                                         <span class="text-sm text-slate-500">{{ __('admin-raffles.registrations.actions.none_available') }}</span>
@@ -140,5 +112,19 @@
                 </table>
             </div>
         @endif
+
+        @if ($snapshot['pagination']['last'] > 1)
+            <nav aria-label="{{ __('admin-raffles.registrations.pagination.label') }}" class="flex flex-wrap gap-2">
+                @foreach ($snapshot['pagination']['links'] as $link)
+                    @if ($link['current'])
+                        <span aria-current="page">{{ $link['page'] }}</span>
+                    @else
+                        <a href="{{ $link['url'] }}">{{ $link['page'] }}</a>
+                    @endif
+                @endforeach
+            </nav>
+        @endif
+
+        <script id="raffle-registration-snapshot" type="application/json">{!! Illuminate\Support\Js::encode($snapshot) !!}</script>
     </section>
 </x-layouts.app>
