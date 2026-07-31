@@ -1,12 +1,15 @@
 <?php
 
 use App\Enums\RaffleRegistrationStatus;
+use App\Http\Resources\Admin\RaffleRegistrationSnapshot;
 use App\Models\Admin;
 use App\Models\Raffle;
 use App\Models\RaffleRegistration;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Route;
 
 use function Pest\Laravel\assertDatabaseCount;
@@ -596,4 +599,176 @@ it('keeps the named restore route in the web and admin authentication middleware
             'raffle' => '[0-9]+',
             'registration' => '[0-9]+',
         ]);
+});
+
+it('paginates authoritative registration snapshots with whole-raffle counts', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+
+    foreach (range(1, 27) as $position) {
+        persistedRaffleRegistration($raffle, [
+            'id' => $position,
+            'name' => "Pagination Guest {$position}",
+            'email' => "pagination-{$position}@example.com",
+            'status' => match (true) {
+                $position <= 20 => RaffleRegistrationStatus::Active,
+                $position <= 24 => RaffleRegistrationStatus::Flagged,
+                default => RaffleRegistrationStatus::Cancelled,
+            },
+        ]);
+    }
+
+    $url = adminRaffleUrl("/raffles/{$raffle->id}/registrations?page=2");
+    $firstPage = $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->getJson(adminRaffleUrl("/raffles/{$raffle->id}/registrations"))->assertOk()->json();
+    $json = $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->getJson($url)->assertOk()->json();
+
+    expect(array_column($firstPage['rows'], 'id'))->toBe(range(27, 3))
+        ->and(array_column($json['rows'], 'id'))->toBe([2, 1])
+        ->and($json['counts'])->toBe(['active' => 20, 'flagged' => 4, 'cancelled' => 3, 'total' => 27])
+        ->and($json['pagination'])->toMatchArray(['current' => 2, 'last' => 2, 'perPage' => 25, 'total' => 27]);
+
+    $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get($url)->assertOk()->assertViewHas('snapshot', $json)
+        ->assertSee('Pagination Guest 2')->assertSee('Pagination Guest 1')
+        ->assertDontSee('Pagination Guest 27');
+});
+
+it('bounds snapshot page links for very large registration totals', function () {
+    $raffle = Raffle::factory()->create();
+    $registrations = new LengthAwarePaginator([], 1_000_000, 25, 20_000);
+
+    $links = RaffleRegistrationSnapshot::make($raffle, $registrations)['pagination']['links'];
+
+    expect(array_column($links, 'page'))->toBe([1, 19_998, 19_999, 20_000, 20_001, 20_002, 40_000])
+        ->and($links)->toHaveCount(7);
+});
+
+it('canonicalizes pagination for html and negotiated json', function (string $query, int $page, string $canonicalQuery) {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    RaffleRegistration::factory()->count(26)->create(['raffle_id' => $raffle->id]);
+    $base = adminRaffleUrl("/raffles/{$raffle->id}/registrations");
+
+    $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get($base.$query)->assertRedirect($base.$canonicalQuery);
+
+    $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->getJson($base.$query)->assertOk()
+        ->assertJsonPath('pagination.current', $page)
+        ->assertJsonPath('pagination.canonicalUrl', $base.$canonicalQuery);
+})->with([
+    'explicit one' => ['?page=1', 1, ''],
+    'malformed scalar' => ['?page=nope', 1, ''],
+    'malformed array' => ['?page%5B%5D=2', 1, ''],
+    'zero' => ['?page=0', 1, ''],
+    'negative' => ['?page=-2', 1, ''],
+    'over last' => ['?page=99', 2, '?page=2'],
+]);
+
+it('keeps complete pagination and status forms functional without javascript', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $older = persistedRaffleRegistration($raffle);
+    RaffleRegistration::factory()->count(25)->create(['raffle_id' => $raffle->id]);
+    $pageTwo = route('admin.raffles.registrations.index', [$raffle, 'page' => 2]);
+
+    $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(route('admin.raffles.registrations.index', $raffle))->assertOk()->assertSee($pageTwo, escape: false);
+
+    $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get($pageTwo)->assertOk()
+        ->assertSee(route('admin.raffles.registrations.flag', [$raffle, $older]), escape: false)
+        ->assertSee('<input type="hidden" name="page" value="2">', escape: false)
+        ->assertSee('<input type="hidden" name="_token"', escape: false);
+
+    $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->post(route('admin.raffles.registrations.flag', [$raffle, $older]), ['page' => 2])
+        ->assertRedirect($pageTwo)->assertSessionHas('admin.raffles.registration_status_flag_success');
+});
+
+it('embeds an xss-safe json snapshot', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    persistedRaffleRegistration($raffle, ['name' => '</script><script>alert(1)</script>']);
+
+    $content = $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(route('admin.raffles.registrations.index', $raffle))->assertOk()->getContent();
+
+    preg_match('/<script id="raffle-registration-snapshot" type="application\/json">(.*?)<\/script>/s', $content, $match);
+    $snapshot = json_decode($match[1] ?? '', true, flags: JSON_THROW_ON_ERROR);
+
+    expect($snapshot['rows'][0]['name'])->toBe('</script><script>alert(1)</script>')
+        ->and($match[1])->not->toContain('</script>');
+});
+
+it('rejects every invalid nested identity without mutation or snapshot', function (string $action, string $invalidPath) {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $otherRaffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($otherRaffle, [
+        'status' => $action === 'restore' ? RaffleRegistrationStatus::Flagged : RaffleRegistrationStatus::Active,
+    ]);
+    $path = strtr($invalidPath, [
+        '{raffle}' => (string) $raffle->id,
+        '{registration}' => (string) $registration->id,
+        '{action}' => $action,
+    ]);
+
+    $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->postJson(adminRaffleUrl($path))->assertNotFound()->assertJsonMissingPath('snapshot');
+
+    expect($registration->fresh()->status)->toBe(
+        $action === 'restore' ? RaffleRegistrationStatus::Flagged : RaffleRegistrationStatus::Active,
+    );
+})->with(fn () => collect(['flag', 'cancel', 'restore'])->crossJoin([
+    '/raffles/nope/registrations/{registration}/{action}',
+    '/raffles/{raffle}/registrations/nope/{action}',
+    '/raffles/{raffle}/registrations/999999/{action}',
+    '/raffles/{raffle}/registrations/{registration}/{action}',
+    '/raffles/{raffle}/registrations/{action}',
+])->mapWithKeys(fn (array $case) => [implode(' ', $case) => $case])->all());
+
+it('returns authoritative negotiated mutation success and stale snapshots on a canonical page', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle);
+    RaffleRegistration::factory()->count(25)->create(['raffle_id' => $raffle->id]);
+    $url = route('admin.raffles.registrations.flag', [$raffle, $registration]);
+
+    $success = $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->postJson($url, ['page' => '99'])->assertOk()->json();
+    expect($success['feedback'])->toBe(trans('admin-raffles.registrations.flash.flag_success'))
+        ->and($success['snapshot']['pagination']['current'])->toBe(2)
+        ->and($success['snapshot']['rows'][0]['status'])->toBe('flagged');
+
+    $stale = $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->postJson($url, ['page' => '2'])->assertConflict()->json();
+    expect($stale['feedback'])->toBe(trans('admin-raffles.registrations.errors.status_unavailable'))
+        ->and($stale['snapshot']['counts'])->toBe($success['snapshot']['counts']);
+});
+
+it('rejects malformed negotiated mutation payloads without changing confirmed state', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle);
+
+    $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->postJson(route('admin.raffles.registrations.cancel', [$raffle, $registration]), ['page' => ['2']])
+        ->assertUnprocessable()->assertJsonMissingPath('snapshot');
+    expect($registration->fresh()->status)->toBe(RaffleRegistrationStatus::Active);
+});
+
+it('returns 419 for an authenticated negotiated mutation without a csrf token', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle);
+
+    $this->app['env'] = 'production';
+    $this->withMiddleware(ValidateCsrfToken::class)->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->postJson(route('admin.raffles.registrations.flag', [$raffle, $registration]), ['page' => '1'])
+        ->assertStatus(419);
+    expect($registration->fresh()->status)->toBe(RaffleRegistrationStatus::Active);
 });

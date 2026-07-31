@@ -28,10 +28,10 @@ $registerAuthenticatedRaffleRoutes = function (): void {
     Route::get('/raffles', [RaffleController::class, 'index'])->name('admin.raffles.index');
     Route::get('/raffles/create', [RaffleController::class, 'create'])->name('admin.raffles.create');
     Route::get('/raffles/{raffle}/edit', [RaffleController::class, 'edit'])->name('admin.raffles.edit');
-    Route::get('/raffles/{raffle}/registrations', [RaffleController::class, 'registrations'])->name('admin.raffles.registrations.index');
-    Route::post('/raffles/{raffle}/registrations/{registration}/flag', [RaffleController::class, 'flagRegistration'])->whereNumber('registration')->name('admin.raffles.registrations.flag');
-    Route::post('/raffles/{raffle}/registrations/{registration}/cancel', [RaffleController::class, 'cancelRegistration'])->whereNumber('registration')->name('admin.raffles.registrations.cancel');
-    Route::post('/raffles/{raffle}/registrations/{registration}/restore', [RaffleController::class, 'restoreRegistration'])->whereNumber('raffle')->whereNumber('registration')->name('admin.raffles.registrations.restore');
+    Route::get('/raffles/{raffle}/registrations', [RaffleController::class, 'registrations'])->whereNumber('raffle')->name('admin.raffles.registrations.index');
+    Route::post('/raffles/{raffle}/registrations/{registration}/flag', [RaffleController::class, 'flagRegistration'])->whereNumber('raffle')->whereNumber('registration')->scopeBindings()->name('admin.raffles.registrations.flag');
+    Route::post('/raffles/{raffle}/registrations/{registration}/cancel', [RaffleController::class, 'cancelRegistration'])->whereNumber('raffle')->whereNumber('registration')->scopeBindings()->name('admin.raffles.registrations.cancel');
+    Route::post('/raffles/{raffle}/registrations/{registration}/restore', [RaffleController::class, 'restoreRegistration'])->whereNumber('raffle')->whereNumber('registration')->scopeBindings()->name('admin.raffles.registrations.restore');
     Route::post('/raffles', [RaffleController::class, 'store'])->name('admin.raffles.store');
     Route::patch('/raffles/{raffle}', [RaffleController::class, 'update'])->name('admin.raffles.update');
     Route::post('/raffles/{raffle}/publish', [RaffleController::class, 'publish'])->name('admin.raffles.publish');

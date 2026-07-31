@@ -86,6 +86,16 @@ return [
         'description' => 'Consultá las inscripciones ya registradas para este sorteo.',
         'summary_title' => 'Resumen de inscripciones',
         'summary_count' => '{0} 0 inscripciones registradas para este sorteo.|{1} 1 inscripción registrada para este sorteo.|[2,*] :count inscripciones registradas para este sorteo.',
+        'pagination' => [
+            'label' => 'Páginas de inscripciones',
+            'page' => 'Página',
+            'navigation_error' => 'No se pudo cargar la página. Intentá nuevamente.',
+            'mutation_error' => 'No se pudo confirmar la acción. Se verificará el estado actual.',
+            'reconciliation_error' => 'No se pudo recuperar el estado actual. Reintentá cuando tengas conexión.',
+            'retry' => 'Reintentar',
+            'session_expired' => 'La sesión administrativa venció.',
+            'login' => 'Iniciar sesión',
+        ],
         'summary' => [
             'active_label' => 'Activas',
             'active_count' => '{0} 0 activas|{1} 1 activa|[2,*] :count activas',
