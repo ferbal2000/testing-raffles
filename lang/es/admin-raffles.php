@@ -86,6 +86,10 @@ return [
         'description' => 'Consultá las inscripciones ya registradas para este sorteo.',
         'summary_title' => 'Resumen de inscripciones',
         'summary_count' => '{0} 0 inscripciones registradas para este sorteo.|{1} 1 inscripción registrada para este sorteo.|[2,*] :count inscripciones registradas para este sorteo.',
+        'pagination' => [
+            'label' => 'Páginas de inscripciones',
+            'page' => 'Página',
+        ],
         'summary' => [
             'active_label' => 'Activas',
             'active_count' => '{0} 0 activas|{1} 1 activa|[2,*] :count activas',
