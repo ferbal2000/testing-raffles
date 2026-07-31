@@ -7,6 +7,7 @@ use App\Models\Raffle;
 use App\Models\RaffleRegistration;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Route;
@@ -728,3 +729,46 @@ it('rejects every invalid nested identity without mutation or snapshot', functio
     '/raffles/{raffle}/registrations/{registration}/{action}',
     '/raffles/{raffle}/registrations/{action}',
 ])->mapWithKeys(fn (array $case) => [implode(' ', $case) => $case])->all());
+
+it('returns authoritative negotiated mutation success and stale snapshots on a canonical page', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle);
+    RaffleRegistration::factory()->count(25)->create(['raffle_id' => $raffle->id]);
+    $url = route('admin.raffles.registrations.flag', [$raffle, $registration]);
+
+    $success = $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->postJson($url, ['page' => '99'])->assertOk()->json();
+    expect($success['feedback'])->toBe(trans('admin-raffles.registrations.flash.flag_success'))
+        ->and($success['snapshot']['pagination']['current'])->toBe(2)
+        ->and($success['snapshot']['rows'][0]['status'])->toBe('flagged');
+
+    $stale = $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->postJson($url, ['page' => '2'])->assertConflict()->json();
+    expect($stale['feedback'])->toBe(trans('admin-raffles.registrations.errors.status_unavailable'))
+        ->and($stale['snapshot']['counts'])->toBe($success['snapshot']['counts']);
+});
+
+it('rejects malformed negotiated mutation payloads without changing confirmed state', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle);
+
+    $this->actingAs($admin, 'admin')->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->postJson(route('admin.raffles.registrations.cancel', [$raffle, $registration]), ['page' => ['2']])
+        ->assertUnprocessable()->assertJsonMissingPath('snapshot');
+    expect($registration->fresh()->status)->toBe(RaffleRegistrationStatus::Active);
+});
+
+it('returns 419 for an authenticated negotiated mutation without a csrf token', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create();
+    $registration = persistedRaffleRegistration($raffle);
+
+    $this->app['env'] = 'production';
+    $this->withMiddleware(ValidateCsrfToken::class)->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->postJson(route('admin.raffles.registrations.flag', [$raffle, $registration]), ['page' => '1'])
+        ->assertStatus(419);
+    expect($registration->fresh()->status)->toBe(RaffleRegistrationStatus::Active);
+});

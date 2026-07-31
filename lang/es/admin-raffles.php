@@ -89,6 +89,12 @@ return [
         'pagination' => [
             'label' => 'Páginas de inscripciones',
             'page' => 'Página',
+            'navigation_error' => 'No se pudo cargar la página. Intentá nuevamente.',
+            'mutation_error' => 'No se pudo confirmar la acción. Se verificará el estado actual.',
+            'reconciliation_error' => 'No se pudo recuperar el estado actual. Reintentá cuando tengas conexión.',
+            'retry' => 'Reintentar',
+            'session_expired' => 'La sesión administrativa venció.',
+            'login' => 'Iniciar sesión',
         ],
         'summary' => [
             'active_label' => 'Activas',

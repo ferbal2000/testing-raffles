@@ -36,15 +36,15 @@ Guard resolved; apply may begin only with Unit 1 on `feat/admin-registration-lis
 
 ## Work Unit 2: Hydration and Navigation
 
-- [ ] 2.1 **RED:** Add Vue/Vitest/jsdom to `package.json`, generated `package-lock.json`, `vite.config.js`, and `bin/test` (`--js --grep`); add failing schema/hydration cases to `resources/js/admin/raffle-registrations/RaffleRegistrations.test.js`.
-- [ ] 2.2 **RED:** In `resources/js/admin/raffle-registrations/RaffleRegistrations.test.js`, cover latest/aborted GETs, push/replace/popstate, latest deferral, focus/live announcements, and navigation 401/419.
-- [ ] 2.3 **GREEN:** Create `resources/js/admin/raffle-registrations/snapshot.js` and `resources/js/admin/raffle-registrations/RaffleRegistrations.vue`; update `resources/js/app.js` and `resources/views/admin/raffles/registrations.blade.php` for validated atomic navigation.
-- [ ] 2.4 **REFACTOR:** Centralize guards in `resources/js/admin/raffle-registrations/RaffleRegistrations.vue`; rerun Unit 2’s focused command.
+- [x] 2.1 **RED:** Add Vue/Vitest/jsdom to `package.json`, generated `package-lock.json`, `vite.config.js`, and `bin/test` (`--js --grep`); add failing schema/hydration cases to `resources/js/admin/raffle-registrations/RaffleRegistrations.test.js`.
+- [x] 2.2 **RED:** In `resources/js/admin/raffle-registrations/RaffleRegistrations.test.js`, cover latest/aborted GETs, push/replace/popstate, latest deferral, focus/live announcements, and navigation 401/419.
+- [x] 2.3 **GREEN:** Create `resources/js/admin/raffle-registrations/snapshot.js` and `resources/js/admin/raffle-registrations/RaffleRegistrations.vue`; update `resources/js/app.js` and `resources/views/admin/raffles/registrations.blade.php` for validated atomic navigation.
+- [x] 2.4 **REFACTOR:** Centralize guards in `resources/js/admin/raffle-registrations/RaffleRegistrations.vue`; rerun Unit 2’s focused command.
 
 ## Work Unit 3: Actions and Recovery
 
-- [ ] 3.1 **RED:** Extend `tests/Feature/Raffles/AdminRaffleRegistrationsTest.php` for locked negotiated POST 200/409 snapshots, canonical pages, malformed payloads, and mutation 401/419.
-- [ ] 3.2 **RED:** Extend `resources/js/admin/raffle-registrations/RaffleRegistrations.test.js` for non-optimistic actions, exact POST/GET counts, reconciliation/retry, deferred popstate, and terminal expiry.
-- [ ] 3.3 **GREEN:** Update `app/Http/Controllers/Admin/RaffleController.php`, `app/Http/Resources/Admin/RaffleRegistrationSnapshot.php`, `resources/js/admin/raffle-registrations/RaffleRegistrations.vue`, and `lang/es/admin-raffles.php` for authoritative recovery states.
-- [ ] 3.4 **REFACTOR:** Keep `openspec/changes/admin-registration-list-pagination-v2/specs/realtime-update-candidate-map/spec.md` as the Candidate request-response delta; add no polling, events, broadcasting, listeners, or runtime transport.
-- [ ] 3.5 **REFACTOR:** Simplify `app/Http/Controllers/Admin/RaffleController.php`/`resources/js/admin/raffle-registrations/RaffleRegistrations.vue` transitions; rerun Unit 3 preserving counts and confirmed data.
+- [x] 3.1 **RED:** Extend `tests/Feature/Raffles/AdminRaffleRegistrationsTest.php` for locked negotiated POST 200/409 snapshots, canonical pages, malformed payloads, and mutation 401/419.
+- [x] 3.2 **RED:** Extend `resources/js/admin/raffle-registrations/RaffleRegistrations.test.js` for non-optimistic actions, exact POST/GET counts, reconciliation/retry, deferred popstate, and terminal expiry.
+- [x] 3.3 **GREEN:** Update `app/Http/Controllers/Admin/RaffleController.php`, `app/Http/Resources/Admin/RaffleRegistrationSnapshot.php`, `resources/js/admin/raffle-registrations/RaffleRegistrations.vue`, and `lang/es/admin-raffles.php` for authoritative recovery states.
+- [x] 3.4 **REFACTOR:** Keep `openspec/changes/admin-registration-list-pagination-v2/specs/realtime-update-candidate-map/spec.md` as the Candidate request-response delta; add no polling, events, broadcasting, listeners, or runtime transport.
+- [x] 3.5 **REFACTOR:** Simplify `app/Http/Controllers/Admin/RaffleController.php`/`resources/js/admin/raffle-registrations/RaffleRegistrations.vue` transitions; rerun Unit 3 preserving counts and confirmed data.
