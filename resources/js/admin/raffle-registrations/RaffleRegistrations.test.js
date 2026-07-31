@@ -33,6 +33,9 @@ const snapshot = (page = 1, canonical = url(page)) => ({
         paginationLabel: 'Páginas',
         page: 'Página',
         navigationError: 'No se pudo cargar la página.',
+        mutationError: 'No se pudo confirmar la acción.',
+        reconciliationError: 'No se pudo recuperar el estado.',
+        retryLabel: 'Reintentar',
         sessionExpired: 'La sesión venció.',
         loginLabel: 'Iniciar sesión',
         summary: { active: 'Activas', flagged: 'Para revisión', cancelled: 'Canceladas', total: 'Total' },
@@ -170,5 +173,85 @@ describe('navigation state machine', () => {
         expect(fetch).toHaveBeenCalledOnce();
         expect(wrapper.text()).toContain('Guest 1');
         expect(push).not.toHaveBeenCalled();
+    });
+});
+
+describe('mutation and reconciliation state machine', () => {
+    it.each([200, 409])('keeps confirmed data while a %i action is pending and commits its authoritative response once', async status => {
+        const pending = deferred();
+        const fetch = vi.fn().mockReturnValue(pending.promise);
+        vi.stubGlobal('fetch', fetch);
+        vi.stubGlobal('confirm', vi.fn(() => true));
+        const wrapper = render();
+        await wrapper.get('form').trigger('submit');
+        await wrapper.get('form').trigger('submit');
+        expect(wrapper.text()).toContain('Guest 1');
+        expect(fetch).toHaveBeenCalledOnce();
+        pending.resolve(response({ snapshot: { ...snapshot(), rows: [{ ...snapshot().rows[0], name: 'Confirmed Guest' }] }, feedback: 'Estado confirmado.' }, status));
+        await flushPromises();
+        expect(wrapper.text()).toContain('Confirmed Guest');
+        expect(wrapper.get('[aria-live="polite"]').text()).toBe('Estado confirmado.');
+    });
+
+    it.each([
+        ['422', () => response({ errors: {} }, 422)],
+        ['non-JSON response', () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('html'); } })],
+        ['network loss', () => Promise.reject(new TypeError('offline'))],
+    ])('reconciles %s once without repeating POST', async (label, uncertain) => {
+        const fetch = vi.fn().mockImplementationOnce(uncertain).mockResolvedValueOnce(response({ ...snapshot(), rows: [{ ...snapshot().rows[0], name: 'Reconciled Guest' }] }));
+        vi.stubGlobal('fetch', fetch);
+        vi.stubGlobal('confirm', vi.fn(() => true));
+        const wrapper = render();
+        await wrapper.get('form').trigger('submit');
+        await flushPromises();
+        expect(wrapper.text()).toContain('Reconciled Guest');
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(fetch.mock.calls.map(call => call[1].method ?? 'GET')).toEqual(['POST', 'GET']);
+    });
+
+    it('blocks after failed reconciliation, retries with GET only, then consumes the latest deferred popstate once', async () => {
+        const retry = deferred();
+        const deferredPage = deferred();
+        const fetch = vi.fn().mockRejectedValueOnce(new TypeError('post lost')).mockRejectedValueOnce(new TypeError('get lost'))
+            .mockReturnValueOnce(retry.promise).mockReturnValueOnce(deferredPage.promise);
+        vi.stubGlobal('fetch', fetch);
+        vi.stubGlobal('confirm', vi.fn(() => true));
+        const wrapper = render();
+        await wrapper.get('form').trigger('submit');
+        history.replaceState({}, '', url(2)); dispatchEvent(new PopStateEvent('popstate'));
+        history.replaceState({}, '', url(3)); dispatchEvent(new PopStateEvent('popstate'));
+        await flushPromises();
+        expect(wrapper.get('button[data-retry]').text()).toBe('Reintentar');
+        await wrapper.get('button[data-retry]').trigger('click');
+        retry.resolve(response(snapshot())); await flushPromises();
+        deferredPage.resolve(response(snapshot(3))); await flushPromises();
+        expect(wrapper.text()).toContain('Guest 3');
+        expect(fetch.mock.calls.map(call => call[1].method ?? 'GET')).toEqual(['POST', 'GET', 'GET', 'GET']);
+    });
+
+    it.each([401, 419])('makes mutation %i terminal without reconciliation or data loss', async status => {
+        const fetch = vi.fn().mockResolvedValue(response(null, status));
+        vi.stubGlobal('fetch', fetch);
+        vi.stubGlobal('confirm', vi.fn(() => true));
+        const wrapper = render();
+        await wrapper.get('form').trigger('submit'); await flushPromises();
+        expect(wrapper.text()).toContain('Guest 1');
+        expect(wrapper.text()).toContain('La sesión venció.');
+        expect(fetch).toHaveBeenCalledOnce();
+    });
+
+    it.each([[401, 'reconciliation'], [419, 'reconciliation'], [401, 'retry'], [419, 'retry']])('makes %s during %s terminal', async (status, stage) => {
+        const fetch = vi.fn().mockRejectedValueOnce(new TypeError('post lost'));
+        if (stage === 'retry') fetch.mockRejectedValueOnce(new TypeError('get lost'));
+        fetch.mockResolvedValueOnce(response(null, status));
+        vi.stubGlobal('fetch', fetch);
+        vi.stubGlobal('confirm', vi.fn(() => true));
+        const wrapper = render();
+        await wrapper.get('form').trigger('submit'); await flushPromises();
+        if (stage === 'retry') {
+            await wrapper.get('button[data-retry]').trigger('click'); await flushPromises();
+        }
+        expect(wrapper.text()).toContain('La sesión venció.');
+        expect(wrapper.text()).toContain('Guest 1');
     });
 });

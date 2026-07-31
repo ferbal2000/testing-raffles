@@ -43,8 +43,8 @@ Guard resolved; apply may begin only with Unit 1 on `feat/admin-registration-lis
 
 ## Work Unit 3: Actions and Recovery
 
-- [ ] 3.1 **RED:** Extend `tests/Feature/Raffles/AdminRaffleRegistrationsTest.php` for locked negotiated POST 200/409 snapshots, canonical pages, malformed payloads, and mutation 401/419.
-- [ ] 3.2 **RED:** Extend `resources/js/admin/raffle-registrations/RaffleRegistrations.test.js` for non-optimistic actions, exact POST/GET counts, reconciliation/retry, deferred popstate, and terminal expiry.
-- [ ] 3.3 **GREEN:** Update `app/Http/Controllers/Admin/RaffleController.php`, `app/Http/Resources/Admin/RaffleRegistrationSnapshot.php`, `resources/js/admin/raffle-registrations/RaffleRegistrations.vue`, and `lang/es/admin-raffles.php` for authoritative recovery states.
-- [ ] 3.4 **REFACTOR:** Keep `openspec/changes/admin-registration-list-pagination-v2/specs/realtime-update-candidate-map/spec.md` as the Candidate request-response delta; add no polling, events, broadcasting, listeners, or runtime transport.
-- [ ] 3.5 **REFACTOR:** Simplify `app/Http/Controllers/Admin/RaffleController.php`/`resources/js/admin/raffle-registrations/RaffleRegistrations.vue` transitions; rerun Unit 3 preserving counts and confirmed data.
+- [x] 3.1 **RED:** Extend `tests/Feature/Raffles/AdminRaffleRegistrationsTest.php` for locked negotiated POST 200/409 snapshots, canonical pages, malformed payloads, and mutation 401/419.
+- [x] 3.2 **RED:** Extend `resources/js/admin/raffle-registrations/RaffleRegistrations.test.js` for non-optimistic actions, exact POST/GET counts, reconciliation/retry, deferred popstate, and terminal expiry.
+- [x] 3.3 **GREEN:** Update `app/Http/Controllers/Admin/RaffleController.php`, `app/Http/Resources/Admin/RaffleRegistrationSnapshot.php`, `resources/js/admin/raffle-registrations/RaffleRegistrations.vue`, and `lang/es/admin-raffles.php` for authoritative recovery states.
+- [x] 3.4 **REFACTOR:** Keep `openspec/changes/admin-registration-list-pagination-v2/specs/realtime-update-candidate-map/spec.md` as the Candidate request-response delta; add no polling, events, broadcasting, listeners, or runtime transport.
+- [x] 3.5 **REFACTOR:** Simplify `app/Http/Controllers/Admin/RaffleController.php`/`resources/js/admin/raffle-registrations/RaffleRegistrations.vue` transitions; rerun Unit 3 preserving counts and confirmed data.
