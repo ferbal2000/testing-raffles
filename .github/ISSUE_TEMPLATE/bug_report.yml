@@ -1,0 +1,111 @@
+name: Bug report
+description: Report a reproducible problem in Testing Raffles.
+labels:
+  - bug
+  - status:needs-review
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug. Use a clear title such as `fix(scope): description` and provide enough detail for maintainers to reproduce the problem.
+
+        New issues start in `status:needs-review`. Do not open a pull request until a maintainer adds `status:approved`.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight checks
+      options:
+        - label: I searched existing issues and confirmed this is not a duplicate.
+          required: true
+        - label: I understand that a pull request must wait until a maintainer adds `status:approved`.
+          required: true
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Bug description
+      description: Describe the problem clearly and concisely.
+      placeholder: What is broken, and when does the problem occur?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Steps to reproduce
+      description: Provide the smallest reliable sequence that reproduces the problem.
+      placeholder: |
+        1. Go to ...
+        2. Perform ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: Explain what you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual behavior
+      description: Explain what happened instead, including any visible error.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected-area
+    attributes:
+      label: Affected area
+      description: Select the area most closely related to the problem.
+      options:
+        - Public raffle experience
+        - Admin raffle management
+        - Registration and participation lifecycle
+        - Authentication and authorization
+        - Domain model or data
+        - Developer tooling, runtime, or CI
+        - Documentation, OpenSpec, or workflow
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Select where the problem occurs.
+      options:
+        - Local Docker environment
+        - GitHub Actions / CI
+        - Staging
+        - Production
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: browser-client
+    attributes:
+      label: Browser or client
+      description: If relevant, provide the browser, device, or API client and version.
+      placeholder: "Example: Firefox 128, Chrome on Android, or curl 8.9"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste relevant output after removing secrets and sensitive data.
+      render: shell
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add screenshots, links, workarounds, or other useful context.
