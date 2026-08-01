@@ -1,0 +1,96 @@
+name: Feature or improvement request
+description: Suggest an outcome that would improve Testing Raffles.
+labels:
+  - enhancement
+  - status:needs-review
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the user or maintainer need before proposing implementation details. Clear outcomes and boundaries help maintainers evaluate the request.
+
+        New issues start in `status:needs-review`. Do not open a pull request until a maintainer adds `status:approved`.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight checks
+      options:
+        - label: I searched existing issues and confirmed this is not a duplicate.
+          required: true
+        - label: I understand that a pull request must wait until a maintainer adds `status:approved`.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the user, maintainer, or contributor problem this request should solve.
+      placeholder: Who experiences the problem, in what situation, and what impact does it have?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-outcome
+    attributes:
+      label: Proposed outcome
+      description: Describe the desired observable outcome rather than a specific implementation.
+      placeholder: What should become possible or work differently when this request is complete?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: List concrete, verifiable conditions for considering this request complete.
+      placeholder: |
+        - [ ] Users can ...
+        - [ ] The system ...
+        - [ ] Documentation ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected-area
+    attributes:
+      label: Affected area
+      description: Select the area most closely related to the request.
+      options:
+        - Public raffle experience
+        - Admin raffle management
+        - Registration and participation lifecycle
+        - Authentication and authorization
+        - Domain model or data
+        - Developer tooling, runtime, or CI
+        - Documentation, OpenSpec, or workflow
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope-and-non-goals
+    attributes:
+      label: Scope and non-goals
+      description: Clarify what this request includes and intentionally excludes.
+      placeholder: |
+        In scope:
+        - ...
+
+        Not in scope:
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives-considered
+    attributes:
+      label: Alternatives considered
+      description: Describe other outcomes, approaches, or workarounds you considered.
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add mockups, examples, links, or other useful context.
