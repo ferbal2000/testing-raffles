@@ -27,11 +27,13 @@ If work accidentally starts on `main`, stop immediately, run a read-only git aud
 
 After `sdd-explore` succeeds and before `sdd-propose` starts:
 
-1. Create a GitHub issue for the selected slice.
-2. Add the required labels, including `status:approved`.
-3. Persist the issue number and URL in Engram.
-4. Record the issue reference in the OpenSpec context when using OpenSpec or hybrid artifact storage.
-5. Do not run proposal, spec, design, tasks, apply, verify, or archive until the approved issue exists.
+1. For automated maintainer SDD issue gates, complete `.github/ISSUE_TEMPLATE/maintainer_sdd_feature.md` and create the structured issue with `gh issue create --body-file`, explicitly applying `enhancement`, `status:needs-review`, and `type:feature`.
+2. Public contributors continue to use `.github/ISSUE_TEMPLATE/feature_request.yml` through the GitHub Feature Request Issue Form; do not route public submissions through the maintainer automation template.
+3. While the issue remains in `status:needs-review`, validate duplicates, scope, privacy, and repository policy.
+4. Only after every validation passes, replace `status:needs-review` with `status:approved`. The template must never auto-approve an issue.
+5. Persist the issue number and URL in Engram.
+6. Record the issue reference in the OpenSpec context when using OpenSpec or hybrid artifact storage.
+7. Do not run proposal, spec, design, tasks, apply, verify, or archive until the approved issue exists.
 
 ## PR Gate
 
