@@ -3,11 +3,29 @@
         <header class="space-y-2">
             <h1 class="text-3xl font-semibold">{{ __('admin-raffles.edit.title') }}</h1>
             <p class="text-slate-600">{{ __('admin-raffles.edit.description') }}</p>
+            <p class="text-sm text-slate-500">{{ __('admin-raffles.edit.identity', ['id' => $raffle->id]) }}</p>
         </header>
 
         <form method="POST" action="{{ route('admin.raffles.update', $raffle) }}" class="space-y-6">
             @csrf
             @method('PATCH')
+
+            <div class="space-y-2">
+                <label for="title" class="text-sm font-medium text-slate-700">{{ __('admin-raffles.edit.fields.title.label') }}</label>
+                <input
+                    id="title"
+                    name="title"
+                    type="text"
+                    maxlength="100"
+                    required
+                    value="{{ old('title', $raffle->title) }}"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-950 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                >
+                <p class="text-sm text-slate-500">{{ __('admin-raffles.edit.fields.title.help') }}</p>
+                @error('title')
+                    <p class="text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
 
             <div class="grid gap-4 md:grid-cols-2">
                 <div class="space-y-2">
