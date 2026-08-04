@@ -66,12 +66,16 @@ final class RaffleController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->normalizeTitle($request);
+
         $validated = $request->validate([
+            'title' => ['required', 'string', 'max:100'],
             'starts_at' => ['nullable', 'date_format:Y-m-d\TH:i'],
             'ends_at' => ['nullable', 'date_format:Y-m-d\TH:i'],
         ]);
 
         Raffle::query()->create([
+            'title' => $validated['title'],
             'starts_at' => $validated['starts_at'] ?? null,
             'ends_at' => $validated['ends_at'] ?? null,
         ]);
@@ -83,12 +87,16 @@ final class RaffleController extends Controller
 
     public function update(Request $request, Raffle $raffle): RedirectResponse
     {
+        $this->normalizeTitle($request);
+
         $validated = $request->validate([
+            'title' => ['required', 'string', 'max:100'],
             'starts_at' => ['nullable', 'date_format:Y-m-d\TH:i'],
             'ends_at' => ['nullable', 'date_format:Y-m-d\TH:i'],
         ]);
 
         $raffle->update([
+            'title' => $validated['title'],
             'starts_at' => $validated['starts_at'] ?? null,
             'ends_at' => $validated['ends_at'] ?? null,
         ]);
@@ -231,6 +239,15 @@ final class RaffleController extends Controller
         abort_unless($admin instanceof Admin, 403);
 
         return $admin;
+    }
+
+    private function normalizeTitle(Request $request): void
+    {
+        $title = $request->input('title');
+
+        if (is_string($title)) {
+            $request->merge(['title' => trim($title)]);
+        }
     }
 
     private function transitionRegistration(

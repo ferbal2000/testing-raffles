@@ -8,6 +8,23 @@
         <form method="POST" action="{{ route('admin.raffles.store') }}" class="space-y-6">
             @csrf
 
+            <div class="space-y-2">
+                <label for="title" class="text-sm font-medium text-slate-700">{{ __('admin-raffles.create.fields.title.label') }}</label>
+                <input
+                    id="title"
+                    name="title"
+                    type="text"
+                    maxlength="100"
+                    required
+                    value="{{ old('title') }}"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-950 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                >
+                <p class="text-sm text-slate-500">{{ __('admin-raffles.create.fields.title.help') }}</p>
+                @error('title')
+                    <p class="text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+
             <div class="grid gap-4 md:grid-cols-2">
                 <div class="space-y-2">
                     <label for="starts_at" class="text-sm font-medium text-slate-700">{{ __('admin-raffles.create.fields.starts_at.label') }}</label>

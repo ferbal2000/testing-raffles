@@ -41,8 +41,12 @@ return [
     ],
     'create' => [
         'title' => 'Crear sorteo',
-        'description' => 'Cargá opcionalmente las fechas de disponibilidad iniciales del sorteo.',
+        'description' => 'Definí el título y, opcionalmente, las fechas de disponibilidad iniciales del sorteo.',
         'fields' => [
+            'title' => [
+                'label' => 'Título',
+                'help' => 'Ingresá un título de hasta 100 caracteres.',
+            ],
             'starts_at' => [
                 'label' => 'Inicio',
                 'help' => 'Dejalo vacío si el sorteo no tiene fecha de inicio todavía.',
@@ -62,8 +66,13 @@ return [
     ],
     'edit' => [
         'title' => 'Editar sorteo',
-        'description' => 'Actualizá opcionalmente las fechas de disponibilidad del sorteo.',
+        'description' => 'Actualizá el título y, opcionalmente, las fechas de disponibilidad del sorteo.',
+        'identity' => 'ID: :id',
         'fields' => [
+            'title' => [
+                'label' => 'Título',
+                'help' => 'Ingresá un título de hasta 100 caracteres.',
+            ],
             'starts_at' => [
                 'label' => 'Inicio',
                 'help' => 'Dejalo vacío si el sorteo no tiene fecha de inicio.',
