@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use LogicException;
 
 #[Fillable([
+    'title',
     'status',
     'starts_at',
     'ends_at',

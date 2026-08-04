@@ -27,15 +27,19 @@ function raffleClosureSnapshot(Raffle $raffle): array
 }
 
 it('persists a new raffle as draft by default', function () {
-    $raffle = Raffle::query()->create([]);
+    $raffle = Raffle::query()->create([
+        'title' => 'Sorteo de verano',
+    ]);
 
-    expect($raffle->status)->toBe(RaffleStatus::Draft)
+    expect($raffle->title)->toBe('Sorteo de verano')
+        ->and($raffle->status)->toBe(RaffleStatus::Draft)
         ->and($raffle->starts_at)->toBeNull()
         ->and($raffle->ends_at)->toBeNull();
 });
 
 it('does not persist a new raffle initially as published', function () {
     $raffle = Raffle::query()->create([
+        'title' => 'Published request',
         'status' => RaffleStatus::Published,
     ]);
 
@@ -44,6 +48,7 @@ it('does not persist a new raffle initially as published', function () {
 
 it('does not persist a new raffle initially as closed', function () {
     $raffle = Raffle::query()->create([
+        'title' => 'Closed request',
         'status' => RaffleStatus::Closed,
     ]);
 
@@ -54,6 +59,7 @@ it('persists explicit availability fields on a raffle record', function () {
     [$startsAt, $endsAt] = availabilityWindow('2026-06-20 10:00:00', '2026-06-25 18:00:00');
 
     $raffle = Raffle::query()->create([
+        'title' => 'Scheduled raffle',
         'starts_at' => $startsAt,
         'ends_at' => $endsAt,
     ]);
@@ -64,8 +70,33 @@ it('persists explicit availability fields on a raffle record', function () {
 
 it('rejects unsupported persisted lifecycle states', function () {
     expect(fn () => Raffle::query()->create([
+        'title' => 'Invalid state raffle',
         'status' => 'drawn',
     ]))->toThrow(ValueError::class);
+});
+
+it('creates bounded factory titles that remain explicitly overridable', function () {
+    $generated = Raffle::factory()->create();
+    $overridden = Raffle::factory()->create([
+        'title' => 'Sorteo personalizado',
+    ]);
+
+    expect($generated->title)->not->toBeEmpty()
+        ->and(mb_strlen($generated->title))->toBeLessThanOrEqual(100)
+        ->and($overridden->title)->toBe('Sorteo personalizado');
+});
+
+it('allows a generated backfill title to be edited through model fillability', function () {
+    $raffle = Raffle::factory()->create([
+        'title' => 'Sorteo #42',
+    ]);
+
+    $raffle->update([
+        'title' => 'Sorteo de invierno',
+    ]);
+
+    expect($raffle->fresh()->title)->toBe('Sorteo de invierno')
+        ->and($raffle->fresh()->status)->toBe(RaffleStatus::Draft);
 });
 
 it('publishes a persisted draft raffle', function () {
