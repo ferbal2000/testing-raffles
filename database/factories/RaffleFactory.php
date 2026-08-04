@@ -20,6 +20,7 @@ class RaffleFactory extends Factory
     public function definition(): array
     {
         return [
+            'title' => fake()->text(100),
             'status' => RaffleStatus::Draft,
             'starts_at' => null,
             'ends_at' => null,
