@@ -9,12 +9,13 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
 
 use function Pest\Laravel\assertDatabaseCount;
 
 uses(RefreshDatabase::class);
 
-function closeRaffleAsAdmin(Raffle $raffle, Admin $admin): Illuminate\Testing\TestResponse
+function closeRaffleAsAdmin(Raffle $raffle, Admin $admin): TestResponse
 {
     return test()
         ->actingAs($admin, 'admin')
@@ -109,14 +110,17 @@ it('rejects ineligible and duplicate close submissions with translated feedback 
 
 it('removes a successfully closed raffle from the public catalog and detail route', function () {
     $admin = Admin::factory()->create();
-    $raffle = Raffle::factory()->published()->openedForParticipation()->create();
+    $raffle = Raffle::factory()->published()->openedForParticipation()->create([
+        'title' => 'Premio de ciclo de vida',
+    ]);
     $publicHost = (string) parse_url((string) config('app.public_url'), PHP_URL_HOST);
     $publicUrl = rtrim((string) config('app.public_url'), '/');
 
     $this->withServerVariables(['HTTP_HOST' => $publicHost])
         ->get($publicUrl)
         ->assertOk()
-        ->assertSeeText("Sorteo #{$raffle->id}");
+        ->assertSeeText('Premio de ciclo de vida')
+        ->assertSeeText("ID del sorteo: {$raffle->id}");
 
     $this->withServerVariables(['HTTP_HOST' => $publicHost])
         ->get("{$publicUrl}/raffles/{$raffle->id}")
@@ -128,7 +132,8 @@ it('removes a successfully closed raffle from the public catalog and detail rout
     $this->withServerVariables(['HTTP_HOST' => $publicHost])
         ->get($publicUrl)
         ->assertOk()
-        ->assertDontSeeText("Sorteo #{$raffle->id}");
+        ->assertDontSeeText('Premio de ciclo de vida')
+        ->assertDontSeeText("ID del sorteo: {$raffle->id}");
 
     $this->withServerVariables(['HTTP_HOST' => $publicHost])
         ->get("{$publicUrl}/raffles/{$raffle->id}")

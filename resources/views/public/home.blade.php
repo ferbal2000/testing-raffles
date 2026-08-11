@@ -16,7 +16,8 @@
         @forelse ($raffles as $raffle)
             <article class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
                 <div class="space-y-1">
-                    <h2 class="text-xl font-semibold text-slate-950">{{ __('home.public.raffle_label') }} #{{ $raffle->id }}</h2>
+                    <h2 class="text-xl font-semibold text-slate-950">{{ $raffle->title }}</h2>
+                    <p class="text-sm text-slate-500">{{ __('public-raffles.identity', ['id' => $raffle->id]) }}</p>
                     <p class="text-sm text-slate-500">{{ $raffle->status_message }}</p>
                 </div>
 

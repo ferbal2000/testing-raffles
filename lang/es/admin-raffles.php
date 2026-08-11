@@ -27,6 +27,7 @@ return [
             'close_unavailable' => 'Este sorteo ya no se puede cerrar.',
         ],
         'columns' => [
+            'title' => 'Título',
             'id' => 'ID',
             'status' => 'Estado',
             'starts_at' => 'Inicio',
@@ -91,7 +92,8 @@ return [
         ],
     ],
     'registrations' => [
-        'title' => 'Inscripciones del sorteo #:id',
+        'title' => 'Inscripciones del sorteo',
+        'identity' => 'ID del sorteo: :id',
         'description' => 'Consultá las inscripciones ya registradas para este sorteo.',
         'summary_title' => 'Resumen de inscripciones',
         'summary_count' => '{0} 0 inscripciones registradas para este sorteo.|{1} 1 inscripción registrada para este sorteo.|[2,*] :count inscripciones registradas para este sorteo.',

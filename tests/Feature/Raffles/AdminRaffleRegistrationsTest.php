@@ -43,13 +43,45 @@ it('shows an explicit empty state for authenticated admins when a raffle has no 
         ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
         ->get(adminRaffleUrl("/raffles/{$raffle->id}/registrations"))
         ->assertOk()
-        ->assertSeeText("Inscripciones del sorteo #{$raffle->id}")
+        ->assertSeeText($raffle->title)
+        ->assertSeeText("ID del sorteo: {$raffle->id}")
         ->assertSee(route('admin.raffles.index'), escape: false)
         ->assertSeeText('Volver al listado')
         ->assertSeeText('Todavía no hay inscripciones para este sorteo.')
         ->assertDontSeeText('Exportar')
         ->assertDontSeeText('Abrir participación')
         ->assertDontSeeText('Cerrar participación');
+});
+
+it('shows the escaped raffle title and numeric id above the registration snapshot', function () {
+    $admin = Admin::factory()->create();
+    $title = '<script>alert("registrations")</script> Inscripciones';
+    $raffle = Raffle::factory()->create(['title' => $title]);
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(adminRaffleUrl("/raffles/{$raffle->id}/registrations"))
+        ->assertOk()
+        ->assertSeeText($title)
+        ->assertSee('&lt;script&gt;alert(&quot;registrations&quot;)&lt;/script&gt; Inscripciones', escape: false)
+        ->assertDontSee('<script>alert("registrations")</script>', escape: false)
+        ->assertSeeText("ID del sorteo: {$raffle->id}")
+        ->assertSee('id="raffle-registration-snapshot"', escape: false);
+});
+
+it('keeps a backfilled raffle title and its numeric id separately visible', function () {
+    $admin = Admin::factory()->create();
+    $raffle = Raffle::factory()->create([
+        'id' => 42,
+        'title' => 'Sorteo #42',
+    ]);
+
+    $this->actingAs($admin, 'admin')
+        ->withServerVariables(['HTTP_HOST' => adminRaffleHost()])
+        ->get(adminRaffleUrl('/raffles/42/registrations'))
+        ->assertOk()
+        ->assertSeeText('Sorteo #42')
+        ->assertSeeText('ID del sorteo: 42');
 });
 
 it('shows a read-only zero-registration summary while preserving the empty state', function () {
