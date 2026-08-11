@@ -22,13 +22,18 @@ beforeEach(function () {
 });
 
 it('shows the public raffle detail page for published raffles only', function () {
-    $publishedRaffle = Raffle::factory()->published()->create();
+    $publishedRaffle = Raffle::factory()->published()->create(['title' => 'Premio principal']);
     $draftRaffle = Raffle::factory()->create();
     $closedRaffle = Raffle::factory()->closed()->create();
 
-    $this->withServerVariables(['HTTP_HOST' => publicRaffleHost()])
+    $response = $this->withServerVariables(['HTTP_HOST' => publicRaffleHost()])
         ->get(publicRaffleUrl("/raffles/{$publishedRaffle->id}"))
-        ->assertOk();
+        ->assertOk()
+        ->assertSeeText('Premio principal')
+        ->assertSeeText("ID del sorteo: {$publishedRaffle->id}")
+        ->assertSeeText('Sorteo publicado');
+
+    expect($response->getContent())->toMatch('/<h1[^>]*>Premio principal<\/h1>/');
 
     $this->withServerVariables(['HTTP_HOST' => publicRaffleHost()])
         ->get(publicRaffleUrl("/raffles/{$draftRaffle->id}"))
@@ -41,6 +46,40 @@ it('shows the public raffle detail page for published raffles only', function ()
     $this->withServerVariables(['HTTP_HOST' => publicRaffleHost()])
         ->get(publicRaffleUrl('/raffles/not-a-number'))
         ->assertNotFound();
+});
+
+it('renders authored markup in the detail title as escaped h1 text', function () {
+    $title = '<script>alert("detail")</script> Premio final';
+    $raffle = Raffle::factory()->published()->create(['title' => $title]);
+
+    $response = $this->withServerVariables(['HTTP_HOST' => publicRaffleHost()])
+        ->get(publicRaffleUrl("/raffles/{$raffle->id}"))
+        ->assertOk()
+        ->assertSeeText($title)
+        ->assertSee('&lt;script&gt;alert(&quot;detail&quot;)&lt;/script&gt; Premio final', escape: false)
+        ->assertDontSee('<script>alert("detail")</script>', escape: false)
+        ->assertSeeText("ID del sorteo: {$raffle->id}")
+        ->assertSeeText('Sorteo publicado');
+
+    expect($response->getContent())
+        ->toMatch('/<h1[^>]*>&lt;script&gt;alert\(&quot;detail&quot;\)&lt;\/script&gt; Premio final<\/h1>/');
+});
+
+it('keeps backfilled title, numeric id, and lifecycle status separately visible', function () {
+    $raffle = Raffle::factory()->published()->create([
+        'id' => 42,
+        'title' => 'Sorteo #42',
+    ]);
+
+    $response = $this->withServerVariables(['HTTP_HOST' => publicRaffleHost()])
+        ->get(publicRaffleUrl('/raffles/42'))
+        ->assertOk()
+        ->assertSeeText('Sorteo #42')
+        ->assertSeeText('ID del sorteo: 42')
+        ->assertSeeText('Estado')
+        ->assertSeeText('Sorteo publicado');
+
+    expect($response->getContent())->toMatch('/<h1[^>]*>Sorteo #42<\/h1>/');
 });
 
 it('shows the guest participation form only while participation is open', function () {
@@ -70,7 +109,7 @@ it('shows the guest participation form only while participation is open', functi
         ->assertDontSeeText('Comprar ticket')
         ->assertDontSeeText('Ticket')
         ->assertDontSeeText('Número')
-        ->assertDontSeeText((string) $openRaffle->id);
+        ->assertSeeText("ID del sorteo: {$openRaffle->id}");
 
     $this->withServerVariables(['HTTP_HOST' => publicRaffleHost()])
         ->get(publicRaffleUrl("/raffles/{$closedParticipationRaffle->id}"))

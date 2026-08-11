@@ -78,6 +78,7 @@
                 <table class="min-w-[40rem] divide-y divide-slate-200 text-left text-sm text-slate-700 sm:min-w-full">
                     <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                         <tr>
+                            <th scope="col" class="px-4 py-3 font-medium">{{ __('admin-raffles.index.columns.title') }}</th>
                             <th scope="col" class="px-4 py-3 font-medium">{{ __('admin-raffles.index.columns.id') }}</th>
                             <th scope="col" class="px-4 py-3 font-medium">{{ __('admin-raffles.index.columns.status') }}</th>
                             <th scope="col" class="px-4 py-3 font-medium">{{ __('admin-raffles.index.columns.starts_at') }}</th>
@@ -89,6 +90,7 @@
                     <tbody class="divide-y divide-slate-200 bg-white">
                         @foreach ($raffles as $raffle)
                             <tr>
+                                <td class="px-4 py-3 font-medium text-slate-950">{{ $raffle->title }}</td>
                                 <td class="whitespace-nowrap px-4 py-3 font-medium text-slate-950">{{ $raffle->id }}</td>
                                 <td class="whitespace-nowrap px-4 py-3">{{ $raffle->status->value }}</td>
                                 <td class="whitespace-nowrap px-4 py-3">{{ $raffle->starts_at?->format('Y-m-d H:i') ?? __('admin-raffles.index.placeholder') }}</td>

@@ -2,7 +2,8 @@
     <section class="space-y-6">
         <div class="space-y-2">
             <p class="text-sm font-medium uppercase tracking-wide text-slate-500">{{ __('public-raffles.title') }}</p>
-            <h1 class="text-3xl font-semibold text-slate-950">{{ $statusMessage }}</h1>
+            <h1 class="text-3xl font-semibold text-slate-950">{{ $raffle->title }}</h1>
+            <p class="text-sm text-slate-500">{{ __('public-raffles.identity', ['id' => $raffle->id]) }}</p>
         </div>
 
         @if (session('public.raffles.participation_success'))

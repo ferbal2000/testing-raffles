@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Detalle del sorteo',
+    'identity' => 'ID del sorteo: :id',
     'status_label' => 'Estado',
     'availability_label' => 'Disponibilidad',
     'starts_at_label' => 'Inicio informado',

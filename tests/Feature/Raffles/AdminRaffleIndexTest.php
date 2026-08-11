@@ -68,6 +68,31 @@ it('shows the raffle index page to authenticated admins', function () {
         ->assertSeeText('Editar');
 });
 
+it('shows escaped persisted titles as primary identity with separate numeric ids', function () {
+    $admin = Admin::factory()->create();
+    $authoredTitle = '<script>alert("raffle")</script> Gran premio';
+    $authoredRaffle = Raffle::factory()->create(['title' => $authoredTitle]);
+    $backfilledRaffle = Raffle::factory()->create([
+        'id' => 42,
+        'title' => 'Sorteo #42',
+    ]);
+
+    $response = raffleIndexResponse($admin)
+        ->assertOk()
+        ->assertSeeText('Título')
+        ->assertSeeText('ID')
+        ->assertSeeText($authoredTitle)
+        ->assertSee('&lt;script&gt;alert(&quot;raffle&quot;)&lt;/script&gt; Gran premio', escape: false)
+        ->assertDontSee('<script>alert("raffle")</script>', escape: false)
+        ->assertSeeText('Sorteo #42')
+        ->assertSee(route('admin.raffles.edit', $authoredRaffle), escape: false)
+        ->assertSee(route('admin.raffles.edit', $backfilledRaffle), escape: false);
+
+    expect($response->getContent())
+        ->toContain('>'.$authoredRaffle->id.'</td>')
+        ->toContain('>42</td>');
+});
+
 it('shows a registrations entry point for every persisted raffle row', function () {
     $admin = Admin::factory()->create();
     $firstRaffle = Raffle::factory()->create();

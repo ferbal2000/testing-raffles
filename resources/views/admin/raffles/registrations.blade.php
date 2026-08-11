@@ -2,7 +2,9 @@
     <section class="w-full max-w-3xl self-start space-y-6 rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <header class="space-y-2">
-                <h1 id="raffle-registration-heading" tabindex="-1" class="text-3xl font-semibold">{{ __('admin-raffles.registrations.title', ['id' => $raffle->id]) }}</h1>
+                <p class="text-sm font-medium uppercase tracking-wide text-slate-500">{{ __('admin-raffles.registrations.title') }}</p>
+                <h1 id="raffle-registration-heading" tabindex="-1" class="text-3xl font-semibold">{{ $raffle->title }}</h1>
+                <p class="text-sm text-slate-500">{{ __('admin-raffles.registrations.identity', ['id' => $raffle->id]) }}</p>
                 <p class="text-slate-600">{{ __('admin-raffles.registrations.description') }}</p>
             </header>
 
